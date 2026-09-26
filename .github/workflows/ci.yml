@@ -20,17 +20,22 @@ jobs:
       - run: terraform fmt -check -recursive -diff
 
   test:
-    name: Validate and test (${{ matrix.module }}, terraform ${{ matrix.terraform }})
+    name: Validate and test (${{ matrix.dir }}, terraform ${{ matrix.terraform }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        module: [v4, v5]
+        dir:
+          - modules/dns/records
+          - modules/dns/v4
+          - modules/dns/v5
+          - examples/v4
+          - examples/v5
         # Minimum supported and the latest version
         terraform: [1.8.5, latest]
     defaults:
       run:
-        working-directory: modules/dns/${{ matrix.module }}
+        working-directory: ${{ matrix.dir }}
     steps:
       - uses: actions/checkout@v7
       - uses: hashicorp/setup-terraform@v4
