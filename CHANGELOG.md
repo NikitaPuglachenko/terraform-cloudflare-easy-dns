@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.5.1] - 2026-09-26
+
+### Changed
+
+- The workarounds for provider v5 issues link to them: the per-type lookup of existing records ([#7004](https://github.com/cloudflare/terraform-provider-cloudflare/issues/7004)) and the `modified_on` error after the v4 to v5 migration ([#7387](https://github.com/cloudflare/terraform-provider-cloudflare/issues/7387)), so they can be removed once the issues are fixed
+
 ## [2.5.0] - 2026-09-26
 
 ### Added
@@ -109,7 +115,8 @@ All notable changes to this project are documented in this file. The format is b
 - Inline aliases pointed to a relative name instead of the full hostname
 - Zone apex (`@`) handling for aliases and nested names
 
-[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.5.0...HEAD
+[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.5.1...HEAD
+[2.5.1]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.5.0...v2.5.1
 [2.5.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.2.0...v2.3.0

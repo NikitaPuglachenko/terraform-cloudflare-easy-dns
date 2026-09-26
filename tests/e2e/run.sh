@@ -97,7 +97,8 @@ case "$summary" in
 esac
 # Provider v5 may report an inconsistent modified_on (different precision than in the
 # migrated state) for some records on this first apply; the records are updated and
-# the next plan is empty, so only this error is tolerated
+# the next plan is empty, so only this error is tolerated until
+# https://github.com/cloudflare/terraform-provider-cloudflare/issues/7387 is fixed
 only_modified_on_inconsistency() {
     local attributes
     grep -q "Provider produced inconsistent result after apply" "$1" || return 1
