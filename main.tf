@@ -7,4 +7,8 @@ module "v5" {
   zone_name       = var.zone_name
   records         = var.records
   import_existing = var.import_existing
+  default_ttl     = var.default_ttl
+  default_proxied = var.default_proxied
+  default_comment = var.default_comment
+  default_tags    = var.default_tags
 }

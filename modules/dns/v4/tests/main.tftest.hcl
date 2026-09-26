@@ -78,3 +78,28 @@ run "zone_lookup" {
     error_message = "Zone lookup"
   }
 }
+
+run "comments_and_tags" {
+  command = plan
+
+  variables {
+    default_comment = "Managed by Terraform"
+    default_tags    = ["managed-by:terraform"]
+    records = {
+      "app" = {
+        A    = [{ content = "192.0.2.1", comment = "Web", tags = ["role:web"] }]
+        AAAA = [{ content = "2001:db8::1" }]
+      }
+    }
+  }
+
+  assert {
+    condition     = cloudflare_record.record["app A 192.0.2.1"].comment == "Web" && cloudflare_record.record["app AAAA 2001:db8::1"].comment == "Managed by Terraform"
+    error_message = "Comments are passed to the resource"
+  }
+
+  assert {
+    condition     = toset(cloudflare_record.record["app A 192.0.2.1"].tags) == toset(["managed-by:terraform", "role:web"])
+    error_message = "Tags are passed to the resource"
+  }
+}

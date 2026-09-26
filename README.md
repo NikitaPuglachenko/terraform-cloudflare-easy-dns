@@ -1,5 +1,11 @@
 # Cloudflare DNS Records Factory (Terraform Module)
 
+[![Terraform Registry](https://img.shields.io/badge/terraform-registry-7B42BC?logo=terraform)](https://registry.terraform.io/modules/NikitaPuglachenko/easy-dns/cloudflare/latest)
+[![Release](https://img.shields.io/github/v/release/NikitaPuglachenko/terraform-cloudflare-easy-dns)](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/releases/latest)
+[![CI](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/actions/workflows/ci.yml/badge.svg)](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/actions/workflows/ci.yml)
+[![End-to-end](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/actions/workflows/e2e.yml/badge.svg)](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/actions/workflows/e2e.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/blob/main/LICENSE)
+
 A flexible Terraform module to manage Cloudflare DNS records using a structured object-based approach. Instead of defining multiple record resources, you can define your entire DNS zone (or sub-sections of it) in a single hierarchical map.
 
 ## Features
@@ -12,7 +18,9 @@ A flexible Terraform module to manage Cloudflare DNS records using a structured 
 - 📥 **Import of Existing Records**: Adopt records that already exist in the zone with a single `import` block (provider v5).
 - 🧩 **All Record Types**: `SRV`, `URI`, `HTTPS`, `SVCB`, `TLSA`, `SSHFP`, `DS`, `LOC` and other structured records through a single `data` map.
 - 🔀 **Provider v4 and v5**: The same input schema for both major versions of the Cloudflare provider.
-- ✅ **Input Validation**: Mistakes in record types, TTL, MX or CAA fields fail at `plan`, before reaching the Cloudflare API.
+- ✅ **Input Validation**: Mistakes in record types, names, IP addresses, TTL, MX or CAA fields fail at `plan`, before reaching the Cloudflare API.
+- 🏷 **Defaults, Comments and Tags**: Set the TTL, proxying, comment and tags once for all records, and override them per record.
+- 🧪 **Tested End to End**: Every record type, updates, import and the v4 to v5 migration are tested against a real Cloudflare zone.
 
 ## Structure
 
@@ -34,10 +42,12 @@ Both wrappers share the same inputs, outputs and record keys, so switching betwe
 | Module | Terraform | Cloudflare provider |
 |--------|-----------|---------------------|
 | Root module | `>= 1.8.0` | `~> 5.26` |
-| `modules/dns/v4` | `>= 1.8.0` | `~> 4.30` |
+| `modules/dns/v4` | `>= 1.8.0` | `~> 4.41` |
 | `modules/dns/v5` | `>= 1.8.0` | `~> 5.26` |
 
 If `zone_name` is not set, the module looks up the zone by `zone_id`, so the API token needs the `Zone:Read` permission.
+
+The v4 wrapper is kept for existing configurations. Provider v4 no longer gets new features, so new configurations should use v5 (the root module), and the v4 wrapper may be removed in a future major version. See [Migrating from v4 to v5](#migrating-from-v4-to-v5).
 
 ## Usage
 
@@ -48,12 +58,12 @@ The module is published on the [Terraform Registry](https://registry.terraform.i
 | v5 | `NikitaPuglachenko/easy-dns/cloudflare` |
 | v4 | `NikitaPuglachenko/easy-dns/cloudflare//modules/dns/v4` |
 
-Without the Registry (e.g. from a Git mirror), use a Git source with a tag: `git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git?ref=v2.4.0` for v5, or with `//modules/dns/v4` before `?ref=` for v4.
+Without the Registry (e.g. from a Git mirror), use a Git source with a tag: `git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git?ref=v2.5.0` for v5, or with `//modules/dns/v4` before `?ref=` for v4.
 
 ```hcl
 module "dns" {
   source  = "NikitaPuglachenko/easy-dns/cloudflare"
-  version = "~> 2.4"
+  version = "~> 2.5"
 
   zone_id   = var.zone_id
   zone_name = "example.com" # optional, looked up from zone_id when omitted
@@ -203,9 +213,12 @@ The `records` input is validated before any API call:
 - Supported record types: see [Record Types](#record-types), plus `ALIASES` (with an optional prefix, e.g. `"_acme-challenge.TXT"`)
 - Records defined by `content` must have a non-empty `content`
 - Structured records must have `data` with only the fields of their type and all required ones; other records must not set `data`
-- `ttl` must be `1` (automatic) or between `30` and `86400`
+- `ttl` and `default_ttl` must be `1` (automatic) or between `30` and `86400`
 - Only `A`, `AAAA`, `CNAME` and `ALIASES` records can be `proxied`
 - `MX` and `URI` records require `priority`
+- `A` records need an IPv4 address, `AAAA` records an IPv6 address, and `CNAME` records a hostname rather than an IP address
+- `TXT` values are limited to 2048 characters
+- Names, prefixes and `ALIASES` must be valid DNS names: labels of letters, digits, `_` and `-` separated by dots, optionally starting with `*` for wildcards
 - `CAA` records require `tag`: `issue`, `issuewild` or `iodef`
 - `key` must not contain whitespace
 - Record keys must be unique. The error shows where each duplicate is defined, e.g. `"_acme-challenge.app TXT 79bead8e6d65" from records["_acme-challenge.app"]["TXT"][0] and records["app"]["_acme-challenge.TXT"][0]`
@@ -213,20 +226,54 @@ The `records` input is validated before any API call:
 
 ## Inputs
 
-Both wrappers take `zone_id`, `zone_name` (optional, looked up from `zone_id` when omitted) and `records`; the v5 wrapper also takes `import_existing`. The full reference of inputs, outputs, requirements and resources is generated from the code with [terraform-docs](https://terraform-docs.io): [`modules/dns/v4`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/modules/dns/v4), [`modules/dns/v5`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/modules/dns/v5). The inputs of the root module are also shown on the [Terraform Registry](https://registry.terraform.io/modules/NikitaPuglachenko/easy-dns/cloudflare/latest?tab=inputs).
+Both wrappers take `zone_id`, `zone_name` (optional, looked up from `zone_id` when omitted), `records` and the [defaults](#defaults-comments-and-tags); the v5 wrapper also takes `import_existing`. The full reference of inputs, outputs, requirements and resources is generated from the code with [terraform-docs](https://terraform-docs.io): [`modules/dns/v4`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/modules/dns/v4), [`modules/dns/v5`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/modules/dns/v5). The inputs of the root module are also shown on the [Terraform Registry](https://registry.terraform.io/modules/NikitaPuglachenko/easy-dns/cloudflare/latest?tab=inputs).
 
 ### Record Object Schema
 
 | Field | Description | Default |
 |-------|-------------|---------|
 | `content` | IP address, hostname, or text value | `null` |
-| `ttl` | Time to Live (automatically set to `1` if proxied) | `3600` |
-| `proxied` | Whether the record gets Cloudflare's proxy | `false` |
+| `ttl` | Time to Live (automatically set to `1` if proxied) | `default_ttl` (`3600`) |
+| `proxied` | Whether the record gets Cloudflare's proxy | `default_proxied` (`false`) for `A`, `AAAA`, `CNAME` and `ALIASES`, otherwise `false` |
 | `priority` | Priority for MX and URI records | `null` |
 | `tag` | Tag for CAA records (`issue`, `issuewild`, `iodef`) | `null` |
 | `flags` | Flags for CAA records | `0` |
 | `data` | Fields of structured records, see [Record Types](#record-types) | `null` |
 | `key` | Stable key used instead of the value in the record key, see [Record Keys](#record-keys) | `null` |
+| `comment` | Note shown in the Cloudflare dashboard | `default_comment` |
+| `tags` | Tags such as `owner:web`, added to `default_tags` | `[]` |
+| `settings` | `flatten_cname`, `ipv4_only` and `ipv6_only` (provider v5 only, ignored by the v4 wrapper) | `null` |
+
+### Defaults, Comments and Tags
+
+Values that most records share can be set once for the module call, and overridden per record:
+
+| Input | Description | Default |
+|-------|-------------|---------|
+| `default_ttl` | TTL of records that do not set one | `3600` |
+| `default_proxied` | Proxying of `A`, `AAAA`, `CNAME` and `ALIASES` records that do not set `proxied` (other types are never proxied) | `false` |
+| `default_comment` | Comment of records that do not set one | `null` |
+| `default_tags` | Tags added to the tags of every record | `[]` |
+
+```hcl
+module "dns" {
+  source  = "NikitaPuglachenko/easy-dns/cloudflare"
+  version = "~> 2.5"
+
+  zone_id         = var.zone_id
+  zone_name       = "example.com"
+  default_proxied = true
+  default_comment = "Managed by Terraform"
+  default_tags    = ["managed-by:terraform"]
+
+  records = {
+    "@"   = { A = [{ content = "192.0.2.10" }] }                                    # proxied
+    "vpn" = { A = [{ content = "192.0.2.20", proxied = false, comment = "WireGuard" }] }
+  }
+}
+```
+
+Cloudflare supports record tags only on some plans; on other plans, leave `default_tags` and `tags` empty.
 
 ## Outputs
 
@@ -234,6 +281,52 @@ Both wrappers take `zone_id`, `zone_name` (optional, looked up from `zone_id` wh
 - `records`: managed records keyed by their [record key](#record-keys), with `id`, `name`, `type` and `content`
 - `state_migration`: map of the record keys used by 1.x to the current ones, see [Upgrading from v1](#upgrading-from-v1)
 - `import_ids` (v5): import IDs of records that already exist in the zone, see [Importing Existing Records](#importing-existing-records)
+
+## Recipes
+
+Mail with SPF, DKIM and DMARC; the DKIM record has a `key`, so rotating the key updates the record in place:
+
+```hcl
+"@" = {
+  MX  = [{ content = "mx1.mail.example.net", priority = 10 }, { content = "mx2.mail.example.net", priority = 20 }]
+  TXT = [{ content = "v=spf1 include:_spf.mail.example.net -all" }]
+  "google._domainkey.TXT" = [{ key = "dkim", content = "v=DKIM1; k=rsa; p=MIIBIjANBg..." }]
+  "_dmarc.TXT"            = [{ content = "v=DMARC1; p=quarantine; rua=mailto:dmarc@example.com" }]
+}
+```
+
+A website behind the Cloudflare proxy, with `www` pointing to the apex:
+
+```hcl
+"@" = {
+  A       = [{ content = "192.0.2.10", proxied = true }]
+  ALIASES = [{ content = "www", proxied = true }]
+}
+```
+
+Certificate authority restrictions and the ACME DNS challenge of a certificate for `app.example.com`:
+
+```hcl
+"@" = {
+  CAA = [
+    { content = "letsencrypt.org", tag = "issue" },
+    { content = "letsencrypt.org", tag = "issuewild" },
+    { content = "mailto:security@example.com", tag = "iodef" },
+  ]
+}
+"app" = {
+  A                     = [{ content = "192.0.2.30" }]
+  "_acme-challenge.TXT" = [{ key = "acme", content = "challenge-token" }]
+}
+```
+
+A service advertised with SRV:
+
+```hcl
+"_sip._tcp" = {
+  SRV = [{ data = { priority = 10, weight = 5, port = 5060, target = "sip.example.com" } }]
+}
+```
 
 ## Importing Existing Records
 
@@ -254,6 +347,8 @@ When the zone already has records, the first `apply` would fail with "record alr
 
 3. Run `terraform plan`. Existing records are shown as imported, and only records missing in the zone are created. Check that no record you expect to be imported is shown as created.
 4. Run `terraform apply`, then remove the `import` block and `import_existing`, so the zone is not read on every plan.
+
+For structured records (`SRV`, `HTTPS`, `TLSA`, ...), provider v5 plans a one-time in-place update right after the import, without visible changes; after the `apply`, the plan is empty.
 
 Matching ignores case, a trailing dot and the quoting of TXT values. A record is imported only when exactly one existing record matches it: when the zone has several identical records, the record is not imported and `plan` shows it as created, so the duplicates can be cleaned up first.
 
@@ -297,7 +392,8 @@ The v5 wrapper contains a `moved` block from `cloudflare_record` to `cloudflare_
 
 1. Upgrade the Cloudflare provider to `~> 5.26`.
 2. Change the module `source` from `//modules/dns/v4` to `//modules/dns/v5`, keeping the module name the same. To go straight to the root module, also add the `moved` block from [Switching from the v5 Submodule to the Root Module](#switching-from-the-v5-submodule-to-the-root-module), with `cloudflare_record` in `from`.
-3. Run `terraform init -upgrade` and `terraform plan`. The plan should only show moved resources, without destroying or creating records. Review it carefully before applying.
+3. Run `terraform init -upgrade` and `terraform plan`. The plan should only show moved resources, without destroying or creating records; provider v5 also plans a one-time in-place update of the moved records (e.g. CAA `flags` become numbers). Review it carefully before applying.
+4. Run `terraform apply`. Provider v5 (checked with 5.26) may report `Provider produced inconsistent result after apply` with `.modified_on` for some records: the timestamp in the migrated state has a different precision. The records are updated anyway; run `terraform plan` again, it should show no changes.
 
 ## Testing
 
@@ -315,7 +411,23 @@ The module READMEs are generated with [terraform-docs](https://terraform-docs.io
 ./scripts/generate-docs.sh
 ```
 
-CI runs `terraform fmt`, `validate` and `test` for the core module, both wrappers and the examples (on Terraform 1.8 and the latest version), checks that the module READMEs are up to date, [TFLint](https://github.com/terraform-linters/tflint) and [Gitleaks](https://github.com/gitleaks/gitleaks) on every pull request.
+CI runs `terraform fmt`, `validate` and `test` for the root module, the core module, both wrappers and the examples (on Terraform 1.8 and the latest version, and on the minimum supported provider versions), checks that the module READMEs are up to date and that the root module and the wrappers have the same interface, [TFLint](https://github.com/terraform-linters/tflint) and [Gitleaks](https://github.com/gitleaks/gitleaks) on every pull request.
+
+### End-to-End Tests
+
+`tests/e2e/run.sh` runs against a real Cloudflare zone. Under a label of the run (e.g. `e2e-1234.example.com`), it:
+
+1. Creates records of every type through the root module and checks that a second `plan` shows no changes (no drift in the provider).
+2. Changes values: a record without a `key` is replaced, a record with a `key` is updated in place.
+3. Adopts the same records into an empty state with `import_existing` and checks that all of them are imported and none created.
+4. Creates records with the v4 wrapper and opens the state with the v5 wrapper: the records must be moved, not recreated.
+5. Deletes everything. `tests/e2e/sweep.sh` also removes records left by failed runs; it only deletes records with the comment `easy-dns-e2e` and a run label in the name.
+
+```sh
+CLOUDFLARE_API_TOKEN=... E2E_ZONE_ID=... E2E_ZONE_NAME=example.com tests/e2e/run.sh
+```
+
+The token needs the `DNS Edit` permission on the zone. In CI, the test runs weekly and on demand (never for pull requests), with the token stored in the `cloudflare-e2e` environment.
 
 ## License
 MIT

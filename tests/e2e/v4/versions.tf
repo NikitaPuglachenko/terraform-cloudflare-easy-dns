@@ -7,3 +7,5 @@ terraform {
     }
   }
 }
+
+provider "cloudflare" {}

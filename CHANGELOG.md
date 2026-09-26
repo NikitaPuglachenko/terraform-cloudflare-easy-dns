@@ -4,6 +4,24 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-09-26
+
+### Added
+
+- `default_ttl`, `default_proxied`, `default_comment` and `default_tags` inputs, overridable per record
+- `comment` and `tags` per record; `settings` (`flatten_cname`, `ipv4_only`, `ipv6_only`) per record for provider v5
+- Validation of IPv4 addresses in `A`, IPv6 addresses in `AAAA`, hostnames in `CNAME`, the length of `TXT` values and DNS names of base names, prefixes and `ALIASES`
+- End-to-end tests against a real Cloudflare zone: every record type, drift, updates, import and the v4 to v5 migration; run weekly and on demand
+- CI tests on the minimum supported provider versions
+- Releases are created from the changelog when a tag is pushed
+- README: badges, recipes, a deprecation note for the v4 wrapper
+
+### Fixed
+
+- Import failed with a Terraform crash when the zone had CAA or DNSKEY records together with other types: provider v5 returns `data.flags` with different types in one list, so existing records are now looked up per record type
+- SVCB and HTTPS records showed a change on every plan: Cloudflare returns their `target` with a trailing dot, which is now added
+- The v4 wrapper required provider `~> 4.30`, but `cloudflare_record` has the `content` attribute only since 4.39; the minimum is now `~> 4.41`, which also fixes the handling of `content` and `value` in the state
+
 ## [2.4.0] - 2026-09-26
 
 ### Added
@@ -91,7 +109,8 @@ All notable changes to this project are documented in this file. The format is b
 - Inline aliases pointed to a relative name instead of the full hostname
 - Zone apex (`@`) handling for aliases and nested names
 
-[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.4.0...HEAD
+[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.5.0...HEAD
+[2.5.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.1.0...v2.2.0
