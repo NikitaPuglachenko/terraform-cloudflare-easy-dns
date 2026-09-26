@@ -51,13 +51,20 @@ locals {
         contains(local.data_types, r.type) ? "${r.name} ${r.type} ${substr(sha1(jsonencode(r.rec.data)), 0, 12)}" :
         "${r.name} ${r.type} ${r.content}"
       )
-      old_key  = r.old_key
-      source   = r.source
-      name     = r.name
-      type     = r.type
-      content  = r.type == "CAA" || contains(local.data_types, r.type) ? null : r.content
-      ttl      = r.rec.ttl
-      proxied  = r.rec.proxied
+      old_key = r.old_key
+      source  = r.source
+      name    = r.name
+      type    = r.type
+      content = r.type == "CAA" || contains(local.data_types, r.type) ? null : r.content
+      ttl     = coalesce(r.rec.ttl, var.default_ttl)
+      proxied = (
+        r.rec.proxied != null ? r.rec.proxied :
+        contains(["A", "AAAA", "CNAME"], r.type) ? var.default_proxied :
+        false
+      )
+      comment  = r.rec.comment != null ? r.rec.comment : var.default_comment
+      tags     = distinct(concat(var.default_tags, coalesce(r.rec.tags, [])))
+      settings = r.rec.settings
       priority = contains(["MX", "URI"], r.type) ? r.rec.priority : r.type == "SRV" ? tonumber(r.rec.data.priority) : null
       data = (
         r.type == "CAA" ? tomap({ flags = tostring(r.rec.flags), tag = r.rec.tag, value = r.content }) :
@@ -87,6 +94,9 @@ locals {
       content  = group[0].content
       ttl      = group[0].ttl
       proxied  = group[0].proxied
+      comment  = group[0].comment
+      tags     = group[0].tags
+      settings = group[0].settings
       priority = group[0].priority
       data     = group[0].data
     }

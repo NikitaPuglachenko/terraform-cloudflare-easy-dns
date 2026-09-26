@@ -315,3 +315,102 @@ run "cname_at_apex_with_other_records" {
     error_message = "CNAME at the apex must be allowed together with other records"
   }
 }
+
+run "invalid_ipv4" {
+  command = plan
+
+  variables {
+    records = { "app" = { A = [{ content = "192.168.1.300" }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "ipv6_in_a_record" {
+  command = plan
+
+  variables {
+    records = { "app" = { A = [{ content = "2001:db8::1" }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "ipv4_in_aaaa_record" {
+  command = plan
+
+  variables {
+    records = { "app" = { AAAA = [{ content = "192.0.2.1" }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "ip_in_cname" {
+  command = plan
+
+  variables {
+    records = { "app" = { CNAME = [{ content = "192.0.2.1" }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "txt_too_long" {
+  command = plan
+
+  variables {
+    records = { "app" = { TXT = [{ content = format("%02049d", 0) }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "invalid_base_name" {
+  command = plan
+
+  variables {
+    records = { "my app" = { A = [{ content = "192.0.2.1" }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "invalid_prefix" {
+  command = plan
+
+  variables {
+    records = { "app" = { "bad..prefix.TXT" = [{ content = "x" }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "invalid_alias" {
+  command = plan
+
+  variables {
+    records = { "app" = { ALIASES = [{ content = "-bad" }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "valid_names" {
+  command = plan
+
+  variables {
+    records = {
+      "*"         = { A = [{ content = "192.0.2.1" }] }
+      "*.dev"     = { A = [{ content = "192.0.2.2" }] }
+      "_sip._tcp" = { SRV = [{ data = { priority = 1, weight = 1, port = 5060, target = "sip.example.com" } }] }
+      "app-1"     = { "_acme-challenge.TXT" = [{ content = "x" }], AAAA = [{ content = "2001:db8::1" }] }
+      "cdn"       = { CNAME = [{ content = "target.example.net." }] }
+    }
+  }
+
+  assert {
+    condition     = length(output.flat_records) == 6
+    error_message = "Wildcards, underscores, hyphens and IPv6 must be accepted"
+  }
+}

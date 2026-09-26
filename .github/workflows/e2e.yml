@@ -1,0 +1,36 @@
+name: End-to-end
+
+# Runs against a real Cloudflare zone with a token that can edit its DNS records,
+# so it never runs for pull requests: only manually and on a schedule. The token is
+# a secret of the cloudflare-e2e environment, and the actions are pinned to commits.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 5 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    name: Real Cloudflare zone
+    runs-on: ubuntu-latest
+    environment: cloudflare-e2e
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_wrapper: false
+      - run: tests/e2e/run.sh
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          E2E_ZONE_ID: ${{ vars.E2E_ZONE_ID }}
+          E2E_ZONE_NAME: ${{ vars.E2E_ZONE_NAME }}
+          E2E_LABEL: e2e-${{ github.run_id }}-${{ github.run_attempt }}

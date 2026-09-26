@@ -65,6 +65,57 @@ jobs:
       - name: Check that module READMEs are up to date
         run: git diff --exit-code || { echo "Module READMEs are outdated, run ./scripts/generate-docs.sh"; exit 1; }
 
+  provider-min:
+    name: Minimum provider (${{ matrix.dir }}, cloudflare ${{ matrix.provider }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { dir: modules/dns/v4, provider: 4.41.0 }
+          - { dir: modules/dns/v5, provider: 5.26.0 }
+          - { dir: ., provider: 5.26.0 }
+    defaults:
+      run:
+        working-directory: ${{ matrix.dir }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+      # The mocked provider uses the schema of this version, so tests catch attributes it lacks
+      - name: Pin the provider to the minimum supported version
+        run: |
+          cat >provider_override.tf <<EOF
+          terraform {
+            required_providers {
+              cloudflare = {
+                source  = "cloudflare/cloudflare"
+                version = "= ${{ matrix.provider }}"
+              }
+            }
+          }
+          EOF
+      - run: terraform init -backend=false
+      - run: terraform validate
+      - run: terraform test
+
+  e2e-config:
+    name: Validate end-to-end configurations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+      - name: Validate
+        run: |
+          for dir in tests/e2e/v5 tests/e2e/import tests/e2e/v4 tests/e2e/v4to5; do
+            terraform -chdir="$dir" init -backend=false -input=false >/dev/null
+            terraform -chdir="$dir" validate
+          done
+      - run: shellcheck tests/e2e/*.sh scripts/*.sh
+
   tflint:
     name: TFLint
     runs-on: ubuntu-latest

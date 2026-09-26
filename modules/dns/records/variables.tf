@@ -3,6 +3,35 @@ variable "root_domain" {
   type        = string
 }
 
+variable "default_ttl" {
+  description = "TTL of records that do not set one (1 means automatic)"
+  type        = number
+  default     = 3600
+
+  validation {
+    condition     = var.default_ttl == 1 || (var.default_ttl >= 30 && var.default_ttl <= 86400)
+    error_message = "default_ttl must be 1 (automatic) or between 30 and 86400 seconds."
+  }
+}
+
+variable "default_proxied" {
+  description = "Whether A, AAAA, CNAME and ALIASES records that do not set proxied are proxied by Cloudflare"
+  type        = bool
+  default     = false
+}
+
+variable "default_comment" {
+  description = "Comment of records that do not set one, e.g. \"Managed by Terraform\""
+  type        = string
+  default     = null
+}
+
+variable "default_tags" {
+  description = "Tags added to all records, e.g. [\"managed-by:terraform\"] (tags require a Cloudflare plan that supports them)"
+  type        = list(string)
+  default     = []
+}
+
 variable "records" {
   description = "DNS records grouped by base name (subdomain or @ for apex), then by record type"
   type = map(
@@ -10,8 +39,8 @@ variable "records" {
       list(
         object({
           content  = optional(string)
-          ttl      = optional(number, 3600)
-          proxied  = optional(bool, false)
+          ttl      = optional(number) # default_ttl when not set
+          proxied  = optional(bool)   # default_proxied when not set
           priority = optional(number)
 
           # for CAA
@@ -23,6 +52,17 @@ variable "records" {
 
           # Stable key instead of the record value, so changing the value updates the record in place
           key = optional(string)
+
+          # Shown in the Cloudflare dashboard: comment replaces default_comment, tags are added to default_tags
+          comment = optional(string)
+          tags    = optional(list(string))
+
+          # Record settings, provider v5 only (ignored by the v4 wrapper)
+          settings = optional(object({
+            flatten_cname = optional(bool)
+            ipv4_only     = optional(bool)
+            ipv6_only     = optional(bool)
+          }))
         })
       )
     )
@@ -120,7 +160,7 @@ variable "records" {
     condition = alltrue(flatten([
       for base_name, type_map in var.records : [
         for raw_key, recs in type_map : [
-          for rec in recs : rec.ttl == 1 || (rec.ttl >= 30 && rec.ttl <= 86400)
+          for rec in recs : rec.ttl == null || rec.ttl == 1 || (coalesce(rec.ttl, 1) >= 30 && coalesce(rec.ttl, 1) <= 86400)
         ]
       ]
     ]))
@@ -131,7 +171,7 @@ variable "records" {
     condition = alltrue(flatten([
       for base_name, type_map in var.records : [
         for raw_key, recs in type_map : [
-          for rec in recs : !rec.proxied || contains(
+          for rec in recs : !coalesce(rec.proxied, false) || contains(
             ["A", "AAAA", "CNAME", "ALIASES"],
             element(split(".", raw_key), length(split(".", raw_key)) - 1)
           )
@@ -172,6 +212,41 @@ variable "records" {
       ]
     ]))
     error_message = "Record key must be a non-empty string without whitespace."
+  }
+
+  validation {
+    condition = alltrue(flatten([
+      for base_name, type_map in var.records : concat(
+        [base_name == "@" || can(regex("^(\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*$", base_name))],
+        [
+          for raw_key, recs in type_map :
+          length(split(".", raw_key)) == 1 || can(regex("^(\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*$", join(".", slice(split(".", raw_key), 0, length(split(".", raw_key)) - 1))))
+        ],
+        [
+          for raw_key, recs in type_map : [
+            for rec in recs : rec.content == null || can(regex("^(\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*$", coalesce(rec.content, "x")))
+          ] if element(split(".", raw_key), length(split(".", raw_key)) - 1) == "ALIASES"
+        ]
+      )
+    ]))
+    error_message = "Names, prefixes and ALIASES must be valid DNS names: labels of letters, digits, '_' and '-' (up to 63 characters) separated by dots, optionally starting with '*'."
+  }
+
+  validation {
+    condition = alltrue(flatten([
+      for base_name, type_map in var.records : [
+        for raw_key, recs in type_map : [
+          for rec in recs : (
+            element(split(".", raw_key), length(split(".", raw_key)) - 1) == "A" ? can(cidrhost("${coalesce(rec.content, "x")}/32", 0)) && !strcontains(coalesce(rec.content, "x"), ":") :
+            element(split(".", raw_key), length(split(".", raw_key)) - 1) == "AAAA" ? can(cidrhost("${coalesce(rec.content, "x")}/128", 0)) && strcontains(coalesce(rec.content, "x"), ":") :
+            element(split(".", raw_key), length(split(".", raw_key)) - 1) == "CNAME" ? !can(cidrhost("${coalesce(rec.content, "x")}/32", 0)) && !strcontains(coalesce(rec.content, "x"), ":") :
+            element(split(".", raw_key), length(split(".", raw_key)) - 1) == "TXT" ? length(coalesce(rec.content, "")) <= 2048 :
+            true
+          )
+        ]
+      ]
+    ]))
+    error_message = "A records need an IPv4 address, AAAA records an IPv6 address, CNAME records a hostname (not an IP address), and TXT values are limited to 2048 characters."
   }
 }
 

@@ -8,6 +8,10 @@ module "records" {
   root_domain      = local.root_domain
   records          = var.records
   existing_records = local.existing_records
+  default_ttl      = var.default_ttl
+  default_proxied  = var.default_proxied
+  default_comment  = var.default_comment
+  default_tags     = var.default_tags
 }
 
 data "cloudflare_zone" "this" {
@@ -28,6 +32,9 @@ resource "cloudflare_dns_record" "record" {
   # Records with structured data (CAA, SRV, ...) cannot be proxied
   proxied  = each.value.data == null ? each.value.proxied : null
   priority = each.value.priority
+  comment  = each.value.comment
+  tags     = length(each.value.tags) > 0 ? each.value.tags : null
+  settings = each.value.settings
 
   # Numeric flags (CAA, DNSKEY) are sent as numbers, NAPTR flags as a string
   data = each.value.data == null ? null : {
