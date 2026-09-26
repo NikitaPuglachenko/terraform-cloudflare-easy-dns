@@ -14,3 +14,8 @@ output "records" {
     }
   }
 }
+
+output "state_migration" {
+  description = "Map of record keys used by module versions 1.x to the current keys, for state migration"
+  value       = module.records.state_migration
+}

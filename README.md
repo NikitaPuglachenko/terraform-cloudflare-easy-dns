@@ -40,7 +40,7 @@ If `zone_name` is not set, the module looks up the zone by `zone_id`, so the API
 ```hcl
 module "dns" {
   # Use //modules/dns/v4 for Cloudflare provider v4
-  source = "git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git//modules/dns/v5?ref=v1.1.0"
+  source = "git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git//modules/dns/v5?ref=v2.0.0"
 
   zone_id   = var.zone_id
   zone_name = "example.com" # optional, looked up from zone_id when omitted
@@ -54,6 +54,10 @@ module "dns" {
       # Result: TXT record for _dmarc.example.com
       "_dmarc.TXT" = [
         { content = "v=DMARC1; p=none" },
+      ]
+      # An explicit key keeps the record in place when the value changes (e.g. DKIM rotation)
+      "google._domainkey.TXT" = [
+        { key = "dkim", content = "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA" },
       ]
       # Result: www.example.com -> CNAME -> example.com
       ALIASES = [
@@ -114,7 +118,29 @@ When you define `ALIASES` inside a block (e.g., inside `"app"`), the module crea
 A key like `"cdn.ALIASES"` works the same way, but the target is the prefixed name: `cdn.app.example.com` (or `cdn.example.com` for `@`).
 
 ### Record Keys
-Keys in the state look like `A_app_0`, `_acme-challenge.TXT_app_0`, `ALIASES_app_support` or `CAA_app_issue_letsencrypt.org_0`. Regular records are keyed by their position in the list, so removing or reordering items in a list recreates the records that follow.
+Each record is keyed in the state by its content, in the zone file format `<name> <TYPE> <value>`, so adding, removing or reordering items in a list affects only those items:
+
+| Record | Key |
+|--------|-----|
+| `A`, `AAAA`, `MX`, `NS`, `PTR` | `app A 30.40.50.60`, `@ MX mail.example.com` |
+| `TXT` | `_dmarc TXT 21541c4e7044` (first 12 characters of the SHA-1 of the value) |
+| `CNAME` and `ALIASES` | `www CNAME` (only one CNAME is allowed per name) |
+| `CAA` | `app CAA issue letsencrypt.org` |
+| Any record with `key` | `google._domainkey TXT dkim` |
+
+```
+module.dns.cloudflare_record.record["app A 30.40.50.60"]
+```
+
+Since the value is a part of the key, changing it replaces the record. For values that change over time (e.g. DKIM rotation or a server IP), set an explicit `key`, so the record is updated in place:
+
+```hcl
+"google._domainkey.TXT" = [
+  { key = "dkim", content = "v=DKIM1; k=rsa; p=MIIBIjANBg..." },
+]
+```
+
+Two records that produce the same key (e.g. the same value listed twice, or a `CNAME` and an alias with the same name) fail at `plan` with the list of duplicates.
 
 ## Validation
 
@@ -126,6 +152,8 @@ The `records` input is validated before any API call:
 - Only `A`, `AAAA`, `CNAME` and `ALIASES` records can be `proxied`
 - `MX` records require `priority`
 - `CAA` records require `tag`: `issue`, `issuewild` or `iodef`
+- `key` must not contain whitespace
+- Record keys must be unique
 
 ## Inputs
 
@@ -145,6 +173,7 @@ The `records` input is validated before any API call:
 | `priority` | Priority for MX records | `null` |
 | `tag` | Tag for CAA records (`issue`, `issuewild`, `iodef`) | `null` |
 | `flags` | Flags for CAA records | `0` |
+| `key` | Stable key used instead of the value in the record key, see [Record Keys](#record-keys) | `null` |
 
 ## Outputs
 
@@ -152,6 +181,28 @@ The `records` input is validated before any API call:
 |------|-------------|
 | `record_names` | Names of all managed records |
 | `records` | Managed records keyed by their stable identifier, with `id`, `name`, `type` and `content` |
+| `state_migration` | Map of record keys used by module versions 1.x to the current keys, see [Upgrading from v1](#upgrading-from-v1) |
+
+## Upgrading from v1
+
+Version 2 changes the record keys in the state (see [Record Keys](#record-keys)). Without migration, Terraform would destroy and recreate every record. The `state_migration` output maps the old keys to the new ones, so the migration can be done with `moved` blocks:
+
+1. Change the module `ref` to `v2.x` and run `terraform init -upgrade`.
+2. Generate `moved` blocks (requires `jq`). Set `MODULE` to the module address and `RESOURCE` to `cloudflare_record` for `v4` or `cloudflare_dns_record` for `v5`:
+
+   ```sh
+   MODULE=module.dns
+   RESOURCE=cloudflare_record
+   echo "jsonencode(${MODULE}.state_migration)" | terraform console \
+     | jq -r --arg addr "$MODULE.$RESOURCE.record" \
+       'fromjson | to_entries[] | "moved {\n  from = \($addr)[\(.key | tojson)]\n  to   = \($addr)[\(.value | tojson)]\n}\n"' \
+     > dns_migration.tf
+   ```
+
+3. Run `terraform plan`. It should only show records that have moved, with no records to add or destroy.
+4. Run `terraform apply`, then delete `dns_migration.tf`. The next `terraform plan` should show no changes.
+
+Upgrade the keys and switch from `v4` to `v5` in separate steps.
 
 ## Migrating from v4 to v5
 

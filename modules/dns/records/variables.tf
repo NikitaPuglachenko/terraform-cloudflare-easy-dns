@@ -17,6 +17,9 @@ variable "records" {
           # for CAA
           tag   = optional(string)
           flags = optional(number, 0)
+
+          # Stable key instead of the record value, so changing the value updates the record in place
+          key = optional(string)
         })
       )
     )
@@ -90,5 +93,16 @@ variable "records" {
       ]
     ]))
     error_message = "CAA records require a tag: issue, issuewild or iodef."
+  }
+
+  validation {
+    condition = alltrue(flatten([
+      for base_name, type_map in var.records : [
+        for raw_key, recs in type_map : [
+          for rec in recs : rec.key == null || can(regex("^\\S+$", rec.key))
+        ]
+      ]
+    ]))
+    error_message = "Record key must be a non-empty string without whitespace."
   }
 }

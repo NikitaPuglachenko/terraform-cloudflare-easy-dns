@@ -9,6 +9,11 @@ variables {
   zone_id   = "z"
   zone_name = "example.com"
   records = {
+    "@" = {
+      ALIASES        = [{ content = "root-alias" }]
+      "_dmarc.TXT"   = [{ content = "v=DMARC1" }]
+      "mail.ALIASES" = [{ content = "m2" }]
+    }
     "app" = {
       A                     = [{ content = "30.40.50.60", proxied = true }]
       TXT                   = [{ content = "v=spf1 ~all" }]
@@ -18,11 +23,6 @@ variables {
       CAA                   = [{ content = "letsencrypt.org", tag = "issue" }]
       MX                    = [{ content = "mx.example.com", priority = 5 }]
     }
-    "@" = {
-      ALIASES        = [{ content = "root-alias" }]
-      "_dmarc.TXT"   = [{ content = "v=DMARC1" }]
-      "mail.ALIASES" = [{ content = "m2" }]
-    }
   }
 }
 
@@ -30,49 +30,50 @@ run "plan" {
   command = plan
 
   assert {
-    condition     = cloudflare_record.record["A_app_0"].ttl == 1 && cloudflare_record.record["TXT_app_0"].ttl == 3600 && cloudflare_record.record["TXT_app_0"].proxied == false
-    error_message = "ttl/proxied"
+    condition     = cloudflare_record.record["app A 30.40.50.60"].ttl == 1 && cloudflare_record.record["app A 30.40.50.60"].proxied == true
+    error_message = "Proxied records must have automatic TTL"
   }
 
   assert {
-    condition     = cloudflare_record.record["ALIASES_app_support"].content == "app.example.com" && cloudflare_record.record["ALIASES_app_support"].ttl == 1800
-    error_message = "legacy alias"
+    condition     = cloudflare_record.record["app TXT ${substr(sha1("v=spf1 ~all"), 0, 12)}"].ttl == 3600 && cloudflare_record.record["app TXT ${substr(sha1("v=spf1 ~all"), 0, 12)}"].proxied == false
+    error_message = "Defaults"
   }
 
   assert {
-    condition     = cloudflare_record.record["_acme-challenge.TXT_app_0"].name == "_acme-challenge.app" && cloudflare_record.record["_dmarc.TXT_@_0"].name == "_dmarc"
-    error_message = "nested names"
+    condition     = cloudflare_record.record["support CNAME"].content == "app.example.com" && cloudflare_record.record["support CNAME"].ttl == 1800
+    error_message = "Alias"
   }
 
   assert {
-    condition     = cloudflare_record.record["ALIASES_INLINE_app_www.ALIASES_0_w2"].content == "www.app.example.com" && cloudflare_record.record["ALIASES_INLINE_@_mail.ALIASES_0_m2"].content == "mail.example.com"
-    error_message = "inline alias"
+    condition     = cloudflare_record.record["w2 CNAME"].content == "www.app.example.com" && cloudflare_record.record["m2 CNAME"].content == "mail.example.com"
+    error_message = "Inline alias"
   }
 
   assert {
-    condition     = cloudflare_record.record["ALIASES_@_root-alias"].content == "example.com"
-    error_message = "apex alias"
+    condition     = cloudflare_record.record["root-alias CNAME"].content == "example.com"
+    error_message = "Apex alias"
   }
 
   assert {
-    condition     = cloudflare_record.record["CAA_app_issue_letsencrypt.org_0"].data[0].flags == "0"
-    error_message = "caa"
+    condition     = cloudflare_record.record["app CAA issue letsencrypt.org"].data[0].flags == "0"
+    error_message = "CAA"
   }
 
   assert {
-    condition     = cloudflare_record.record["MX_app_0"].priority == 5 && cloudflare_record.record["TXT_app_0"].priority == null
-    error_message = "mx priority"
+    condition     = cloudflare_record.record["app MX mx.example.com"].priority == 5 && cloudflare_record.record["app TXT ${substr(sha1("v=spf1 ~all"), 0, 12)}"].priority == null
+    error_message = "Priority only for MX"
   }
 }
 
 run "zone_lookup" {
   command = plan
+
   variables {
     zone_name = null
   }
 
   assert {
-    condition     = cloudflare_record.record["ALIASES_app_support"].content == "app.looked-up.com"
-    error_message = "zone lookup"
+    condition     = cloudflare_record.record["support CNAME"].content == "app.looked-up.com"
+    error_message = "Zone lookup"
   }
 }

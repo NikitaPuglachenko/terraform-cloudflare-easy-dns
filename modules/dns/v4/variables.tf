@@ -23,6 +23,9 @@ variable "records" {
           # for CAA
           tag   = optional(string)
           flags = optional(number, 0)
+
+          # Stable key instead of the record value, so changing the value updates the record in place
+          key = optional(string)
         })
       )
     )

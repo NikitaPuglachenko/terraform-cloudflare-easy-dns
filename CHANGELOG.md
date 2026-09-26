@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-09-26
+
+### Changed
+
+- **Breaking:** records are keyed in the state by their content in the zone file format (`app A 30.40.50.60`, `www CNAME`, `_dmarc TXT 21541c4e7044`) instead of their position in the list, so adding, removing or reordering items no longer recreates other records. Existing states must be migrated, see "Upgrading from v1" in the README
+
+### Added
+
+- Optional `key` field to keep a record in place when its value changes
+- Duplicate record keys fail at `plan` with the list of duplicates
+- `state_migration` output mapping the 1.x keys to the new ones, used to generate `moved` blocks
+
 ## [1.1.0] - 2026-09-26
 
 ### Added
@@ -37,6 +49,7 @@ All notable changes to this project are documented in this file. The format is b
 - Inline aliases pointed to a relative name instead of the full hostname
 - Zone apex (`@`) handling for aliases and nested names
 
-[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v1.1.0...v2.0.0
 [1.1.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/releases/tag/v1.0.0
