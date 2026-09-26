@@ -10,14 +10,18 @@ A flexible Terraform module to manage Cloudflare DNS records using a structured 
 - ☁️ **Cloudflare Optimized**: Automatic `TTL = 1` for proxied records.
 - 🛡 **CAA Support**: Proper handling of CAA tags, flags, and values.
 - 🔀 **Provider v4 and v5**: The same input schema for both major versions of the Cloudflare provider.
+- ✅ **Input Validation**: Mistakes in record types, TTL, MX or CAA fields fail at `plan`, before reaching the Cloudflare API.
 
 ## Structure
 
 ```
 modules/dns/
-├── records/   # Provider-agnostic core: flattens the input map (used internally)
+├── records/   # Provider-agnostic core: validates and flattens the input map (used internally)
 ├── v4/        # Wrapper for Cloudflare provider v4 (cloudflare_record)
 └── v5/        # Wrapper for Cloudflare provider v5 (cloudflare_dns_record)
+examples/
+├── v4/        # Complete example for provider v4
+└── v5/        # Complete example for provider v5
 ```
 
 Both wrappers share the same inputs, outputs and record keys, so switching between them only requires changing the `source`.
@@ -36,12 +40,27 @@ If `zone_name` is not set, the module looks up the zone by `zone_id`, so the API
 ```hcl
 module "dns" {
   # Use //modules/dns/v4 for Cloudflare provider v4
-  source = "git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git//modules/dns/v5?ref=<tag>"
+  source = "git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git//modules/dns/v5?ref=v1.0.0"
 
   zone_id   = var.zone_id
   zone_name = "example.com" # optional, looked up from zone_id when omitted
 
   records = {
+    # Zone apex (example.com)
+    "@" = {
+      A = [
+        { content = "30.40.50.61", proxied = true },
+      ]
+      # Result: TXT record for _dmarc.example.com
+      "_dmarc.TXT" = [
+        { content = "v=DMARC1; p=none" },
+      ]
+      # Result: www.example.com -> CNAME -> example.com
+      ALIASES = [
+        { content = "www", proxied = true },
+      ]
+    }
+
     # This will manage records for app.example.com
     "app" = {
       A = [
@@ -73,24 +92,11 @@ module "dns" {
         { content = "static" },
       ]
     }
-
-    # Zone apex (example.com)
-    "@" = {
-      A = [
-        { content = "30.40.50.61", proxied = true },
-      ]
-      # Result: TXT record for _dmarc.example.com
-      "_dmarc.TXT" = [
-        { content = "v=DMARC1; p=none" },
-      ]
-      # Result: www.example.com -> CNAME -> example.com
-      ALIASES = [
-        { content = "www", proxied = true },
-      ]
-    }
   }
 }
 ```
+
+Complete runnable configurations are available in [`examples/v4`](examples/v4) and [`examples/v5`](examples/v5).
 
 ## How It Works
 
@@ -109,6 +115,17 @@ A key like `"cdn.ALIASES"` works the same way, but the target is the prefixed na
 
 ### Record Keys
 Keys in the state look like `A_app_0`, `_acme-challenge.TXT_app_0`, `ALIASES_app_support` or `CAA_app_issue_letsencrypt.org_0`. Regular records are keyed by their position in the list, so removing or reordering items in a list recreates the records that follow.
+
+## Validation
+
+The `records` input is validated before any API call:
+
+- Supported record types: `A`, `AAAA`, `CNAME`, `MX`, `NS`, `PTR`, `TXT`, `CAA` and `ALIASES` (with an optional prefix, e.g. `"_acme-challenge.TXT"`)
+- Every record must have a non-empty `content`
+- `ttl` must be `1` (automatic) or between `30` and `86400`
+- Only `A`, `AAAA`, `CNAME` and `ALIASES` records can be `proxied`
+- `MX` records require `priority`
+- `CAA` records require `tag`: `issue`, `issuewild` or `iodef`
 
 ## Inputs
 
@@ -134,6 +151,7 @@ Keys in the state look like `A_app_0`, `_acme-challenge.TXT_app_0`, `ALIASES_app
 | Name | Description |
 |------|-------------|
 | `record_names` | Names of all managed records |
+| `records` | Managed records keyed by their stable identifier, with `id`, `name`, `type` and `content` |
 
 ## Migrating from v4 to v5
 
@@ -145,7 +163,7 @@ The v5 wrapper contains a `moved` block from `cloudflare_record` to `cloudflare_
 
 ## Testing
 
-Each wrapper has plan-only tests with a mocked provider, no Cloudflare credentials needed:
+The core module, both wrappers and the examples have plan-only tests (the wrappers and examples use a mocked provider), no Cloudflare credentials needed:
 
 ```sh
 cd modules/dns/v5
@@ -153,7 +171,7 @@ terraform init
 terraform test
 ```
 
-CI runs `terraform fmt`, `validate` and `test` for both wrappers (on Terraform 1.8 and the latest version), [TFLint](https://github.com/terraform-linters/tflint) and [Gitleaks](https://github.com/gitleaks/gitleaks) on every pull request.
+CI runs `terraform fmt`, `validate` and `test` for the core module, both wrappers and the examples (on Terraform 1.8 and the latest version), [TFLint](https://github.com/terraform-linters/tflint) and [Gitleaks](https://github.com/gitleaks/gitleaks) on every pull request.
 
 ## License
 MIT
