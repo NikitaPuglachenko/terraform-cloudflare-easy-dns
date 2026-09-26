@@ -201,11 +201,7 @@ The `records` input is validated before any API call:
 
 ## Inputs
 
-| Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
-| `zone_id` | The Cloudflare Zone ID where records will be created | `string` | - | Yes |
-| `zone_name` | Zone domain name (e.g. `example.com`), used as the target for aliases. Looked up from `zone_id` when `null` | `string` | `null` | No |
-| `records` | A map of DNS records grouped by base name, then by record type | `map(map(list(object)))` | - | Yes |
+Both wrappers take `zone_id`, `zone_name` (optional, looked up from `zone_id` when omitted) and `records`. The full reference of inputs, outputs, requirements and resources is generated from the code with [terraform-docs](https://terraform-docs.io): [`modules/dns/v4`](modules/dns/v4/README.md), [`modules/dns/v5`](modules/dns/v5/README.md).
 
 ### Record Object Schema
 
@@ -222,11 +218,9 @@ The `records` input is validated before any API call:
 
 ## Outputs
 
-| Name | Description |
-|------|-------------|
-| `record_names` | Names of all managed records |
-| `records` | Managed records keyed by their stable identifier, with `id`, `name`, `type` and `content` |
-| `state_migration` | Map of record keys used by module versions 1.x to the current keys, see [Upgrading from v1](#upgrading-from-v1) |
+- `record_names`: names of all managed records
+- `records`: managed records keyed by their [record key](#record-keys), with `id`, `name`, `type` and `content`
+- `state_migration`: map of the record keys used by 1.x to the current ones, see [Upgrading from v1](#upgrading-from-v1)
 
 ## Upgrading from v1
 
@@ -267,7 +261,13 @@ terraform init
 terraform test
 ```
 
-CI runs `terraform fmt`, `validate` and `test` for the core module, both wrappers and the examples (on Terraform 1.8 and the latest version), [TFLint](https://github.com/terraform-linters/tflint) and [Gitleaks](https://github.com/gitleaks/gitleaks) on every pull request.
+The module READMEs are generated with [terraform-docs](https://terraform-docs.io). After changing variables, outputs or requirements, regenerate them:
+
+```sh
+./scripts/generate-docs.sh
+```
+
+CI runs `terraform fmt`, `validate` and `test` for the core module, both wrappers and the examples (on Terraform 1.8 and the latest version), checks that the module READMEs are up to date, [TFLint](https://github.com/terraform-linters/tflint) and [Gitleaks](https://github.com/gitleaks/gitleaks) on every pull request.
 
 ## License
 MIT

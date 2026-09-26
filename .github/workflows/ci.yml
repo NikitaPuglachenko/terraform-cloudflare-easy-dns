@@ -46,6 +46,22 @@ jobs:
       - run: terraform validate
       - run: terraform test
 
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    env:
+      TERRAFORM_DOCS_VERSION: v0.24.0
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install terraform-docs
+        run: |
+          curl -sSLo terraform-docs.tar.gz "https://github.com/terraform-docs/terraform-docs/releases/download/${TERRAFORM_DOCS_VERSION}/terraform-docs-${TERRAFORM_DOCS_VERSION}-linux-amd64.tar.gz"
+          sudo tar -xzf terraform-docs.tar.gz -C /usr/local/bin terraform-docs
+          rm terraform-docs.tar.gz
+      - run: ./scripts/generate-docs.sh
+      - name: Check that module READMEs are up to date
+        run: git diff --exit-code || { echo "Module READMEs are outdated, run ./scripts/generate-docs.sh"; exit 1; }
+
   tflint:
     name: TFLint
     runs-on: ubuntu-latest
