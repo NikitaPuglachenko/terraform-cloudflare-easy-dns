@@ -153,5 +153,7 @@ terraform init
 terraform test
 ```
 
+CI runs `terraform fmt`, `validate` and `test` for both wrappers (on the minimum supported and the latest Terraform versions), [TFLint](https://github.com/terraform-linters/tflint) and [Gitleaks](https://github.com/gitleaks/gitleaks) on every pull request.
+
 ## License
 MIT
