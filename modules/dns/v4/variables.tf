@@ -11,11 +11,11 @@ variable "zone_name" {
 
 variable "records" {
   description = <<-EOT
-    DNS records: records[NAME][TYPE] = [RECORD, ...], where NAME is a name within the
-    zone (@ for the apex) and TYPE a record type, optionally with a prefix
-    ("_acme-challenge.TXT"). Record attributes: content, ttl, proxied, priority, tag, flags,
-    data, key, comment, tags and settings (flatten_cname, ipv4_only, ipv6_only). See the
-    README for the details. Unknown attributes fail at plan.
+    DNS records: `records[NAME][TYPE] = [RECORD, ...]`, where NAME is a name within the
+    zone (`@` for the apex) and TYPE a record type, optionally with a prefix
+    (`"_acme-challenge.TXT"`). Record attributes: `content`, `ttl`, `proxied`, `priority`,
+    `tag`, `flags`, `data`, `key`, `comment`, `tags` and `settings` (`flatten_cname`,
+    `ipv4_only`, `ipv6_only`). See the README for the details. Unknown attributes fail at plan.
   EOT
   # Not a typed object: Terraform silently drops unknown attributes when converting to an
   # object type, so misspelled attributes are checked here and the typed structure is
