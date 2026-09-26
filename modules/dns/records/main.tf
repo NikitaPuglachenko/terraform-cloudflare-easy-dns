@@ -1,10 +1,4 @@
 locals {
-  root_domain = (
-    var.zone_id == "your-zone-id-for-example.com" ? "example.com" :
-    var.zone_id == "your-zone-id-for-nonexample.com" ? "nonexample.com" :
-    "default-domain.com"
-  )
-
   flat_records_regular = merge([
     for base_name, type_map in var.records : merge([
       for raw_key, recs in type_map : (
@@ -18,10 +12,14 @@ locals {
           ) => merge(
           rec,
           length(split(".", raw_key)) > 1 ? {
-            name = format(
-              "%s.%s",
-              join(".", slice(split(".", raw_key), 0, length(split(".", raw_key)) - 1)),
-              base_name
+            name = (
+              base_name == "@"
+              ? join(".", slice(split(".", raw_key), 0, length(split(".", raw_key)) - 1))
+              : format(
+                "%s.%s",
+                join(".", slice(split(".", raw_key), 0, length(split(".", raw_key)) - 1)),
+                base_name
+              )
             )
             type = element(split(".", raw_key), length(split(".", raw_key)) - 1)
             } : {
@@ -40,9 +38,9 @@ locals {
         "ALIASES_${name}_${rec.content}" => {
           name     = rec.content
           type     = "CNAME"
-          content  = "${name}.${local.root_domain}"
-          ttl      = lookup(rec, "ttl", null)
-          proxied  = lookup(rec, "proxied", false)
+          content  = name == "@" ? var.root_domain : "${name}.${var.root_domain}"
+          ttl      = rec.ttl
+          proxied  = rec.proxied
           priority = null
         }
       }
@@ -59,10 +57,10 @@ locals {
           content = format(
             "%s.%s",
             join(".", slice(split(".", raw_key), 0, length(split(".", raw_key)) - 1)),
-            base_name
+            base_name == "@" ? var.root_domain : "${base_name}.${var.root_domain}"
           )
-          ttl      = lookup(rec, "ttl", null)
-          proxied  = lookup(rec, "proxied", false)
+          ttl      = rec.ttl
+          proxied  = rec.proxied
           priority = null
         }
       }
