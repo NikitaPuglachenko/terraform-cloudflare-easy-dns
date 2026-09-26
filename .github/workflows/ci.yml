@@ -34,6 +34,8 @@ jobs:
           - modules/dns/v5
           - examples/v4
           - examples/v5
+          - examples/yaml
+          - examples/import
         # Minimum supported and the latest version
         terraform: [1.8.5, latest]
     defaults:
@@ -125,7 +127,7 @@ jobs:
       - run: python3 scripts/generate-schema.py
       - name: Check that the schema is up to date
         run: git diff --exit-code schema/ || { echo "The schema is outdated, run scripts/generate-schema.py"; exit 1; }
-      - run: python3 scripts/test-schema.py
+      - run: python3 scripts/test-schema.py examples/yaml/records.easy-dns.yaml
 
   tflint:
     name: TFLint

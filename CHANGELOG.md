@@ -9,6 +9,7 @@ All notable changes to this project are documented in this file. The format is b
 ### Added
 
 - JSON Schema `schema/records.schema.json` for records kept in YAML, for completion and validation in editors; it is generated from the records module and tested in CI, also against the module through `yamldecode`
+- Examples `examples/yaml` (records in `records.easy-dns.yaml`, checked by the schema in CI) and `examples/import` (adopting an existing zone)
 - Unknown record attributes fail at `plan` with the record and the attribute, e.g. `records["app"]["A"][0]: unknown attribute "proxid"`, also inside `settings`; before, Terraform silently dropped them, so a misspelled optional attribute was ignored
 
 ### Fixed
@@ -17,6 +18,7 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Changed
 
+- `examples/v5` uses the root module, like the Registry source
 - The `records` input of the root module and the wrappers has the type `any`, so unknown attributes reach the check; the record schema is in the input description and the README, and the records module still converts the value to the typed structure
 
 ## [2.5.3] - 2026-09-26

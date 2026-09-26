@@ -75,8 +75,11 @@ modules/dns/
 ├── v4/        # Wrapper for Cloudflare provider v4 (cloudflare_record)
 └── v5/        # Wrapper for Cloudflare provider v5 (cloudflare_dns_record)
 examples/
-├── v4/        # Complete example for provider v4
-└── v5/        # Complete example for provider v5
+├── v5/        # Records in HCL
+├── yaml/      # Records in a YAML file, validated by the JSON Schema
+├── import/    # Adopting a zone that already has records
+└── v4/        # Provider v4, for existing configurations
+schema/        # JSON Schema for records in YAML
 ```
 
 Both wrappers share the same inputs, outputs and record keys, so switching between them only requires changing the `source`. The root module passes everything to the v5 wrapper, so it has the same inputs and outputs.
@@ -179,7 +182,7 @@ module "dns" {
 }
 ```
 
-Complete runnable configurations are available in [`examples/v4`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/examples/v4) and [`examples/v5`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/examples/v5).
+Complete runnable configurations are available in [`examples`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/examples): `v5` (records in HCL), `yaml` (records in a YAML file), `import` (adopting an existing zone) and `v4` (provider v4, for existing configurations).
 
 ## How It Works
 
@@ -348,20 +351,29 @@ Cloudflare supports record tags only on some plans; on other plans, leave `defau
 Records can be kept in a YAML file and passed with `yamldecode`:
 
 ```hcl
-records = yamldecode(file("${path.module}/dns.yaml")).records
+records = yamldecode(file("${path.module}/records.easy-dns.yaml")).records
 ```
 
 `schema/records.schema.json` is a JSON Schema for such a file (a document with a `records` key). Editors use it for completion of record types, attributes and `data` fields, and highlight mistakes such as `proxid`, `ttl: 5m` or a CAA `tag` that does not exist before `terraform plan`:
 
 The schema URL of this version is [`https://raw.githubusercontent.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/v2.6.0/schema/records.schema.json`](https://raw.githubusercontent.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/v2.6.0/schema/records.schema.json).
 
-- **VS Code** (with the YAML extension): add a comment with the schema URL at the top of the file
+Name the files `*.easy-dns.yaml` (e.g. `records.easy-dns.yaml`) and map this pattern to the schema once:
 
-  ```yaml
-  # yaml-language-server: $schema=<schema URL>
+- **JetBrains IDEs**: Settings, Languages & Frameworks, Schemas and DTDs, JSON Schema Mappings: add the schema URL with the file path pattern `*.easy-dns.yaml`.
+- **VS Code** (with the YAML extension): in the settings,
+
+  ```json
+  "yaml.schemas": { "<schema URL>": "*.easy-dns.yaml" }
   ```
 
-- **JetBrains IDEs**: Settings, Languages & Frameworks, Schemas and DTDs, JSON Schema Mappings: add the schema URL and map it to the YAML files with records.
+Alternatively, a comment at the top of a file links the schema regardless of its name:
+
+```yaml
+# yaml-language-server: $schema=<schema URL>
+```
+
+See [`examples/yaml`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/examples/yaml).
 
 Use the schema of the module version you use. For records written in HCL, Terraform provides no such completion, and misspelled attributes are reported at `plan`.
 

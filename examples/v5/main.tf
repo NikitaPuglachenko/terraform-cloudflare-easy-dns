@@ -2,7 +2,7 @@ module "dns" {
   # Outside of this repository use the Terraform Registry:
   #   source  = "NikitaPuglachenko/easy-dns/cloudflare"
   #   version = "~> 2.6"
-  source = "../../modules/dns/v5"
+  source = "../.."
 
   zone_id   = var.zone_id
   zone_name = var.zone_name

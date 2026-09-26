@@ -1,0 +1,37 @@
+# yaml-language-server: $schema=../../schema/records.schema.json
+# The comment above links the schema of this repository; outside of it, map
+# *.easy-dns.yaml to the schema URL of the module version in the editor settings.
+
+records:
+  # Zone apex (example.com): website behind the proxy and mail
+  "@":
+    A:
+      - { content: 192.0.2.10, proxied: true }
+    ALIASES:
+      - { content: www, proxied: true }
+    MX:
+      - { content: mx1.mail.example.net, priority: 10 }
+      - { content: mx2.mail.example.net, priority: 20 }
+    TXT:
+      - { content: "v=spf1 include:_spf.mail.example.net -all" }
+    google._domainkey.TXT:
+      # A key keeps the record in place when the DKIM key is rotated
+      - { key: dkim, content: "v=DKIM1; k=rsa; p=MIIBIjANBg..." }
+    _dmarc.TXT:
+      - { content: "v=DMARC1; p=quarantine; rua=mailto:dmarc@example.com" }
+    CAA:
+      - { content: letsencrypt.org, tag: issue }
+      - { content: letsencrypt.org, tag: issuewild }
+
+  # Internal services, not proxied
+  git:
+    A:
+      - { content: 192.0.2.20, comment: Git server }
+  vault:
+    A:
+      - { content: 192.0.2.21, ttl: 300 }
+
+  # A service advertised with SRV
+  _sip._tcp:
+    SRV:
+      - data: { priority: 10, weight: 5, port: 5060, target: sip.example.com }
