@@ -24,6 +24,9 @@ variable "records" {
           tag   = optional(string)
           flags = optional(number, 0)
 
+          # Structured data for SRV, URI, HTTPS, SVCB, TLSA, SMIMEA, SSHFP, DS, DNSKEY, CERT, NAPTR and LOC
+          data = optional(map(string))
+
           # Stable key instead of the record value, so changing the value updates the record in place
           key = optional(string)
         })

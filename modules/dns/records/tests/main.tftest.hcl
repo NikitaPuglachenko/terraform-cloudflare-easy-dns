@@ -62,7 +62,7 @@ run "flattening" {
   }
 
   assert {
-    condition     = output.flat_records["app CAA issue letsencrypt.org"].tag == "issue"
+    condition     = output.flat_records["app CAA issue letsencrypt.org"].data.tag == "issue" && output.flat_records["app CAA issue letsencrypt.org"].data.flags == "0" && output.flat_records["app CAA issue letsencrypt.org"].content == null
     error_message = "CAA"
   }
 
@@ -174,6 +174,106 @@ run "caa_without_tag" {
 
   variables {
     records = { "app" = { CAA = [{ content = "letsencrypt.org" }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "data_types" {
+  command = plan
+
+  variables {
+    records = {
+      "_sip._tcp" = {
+        SRV = [{ data = { priority = 10, weight = 5, port = 5060, target = "sip.example.com" } }]
+      }
+      "@" = {
+        HTTPS      = [{ key = "h3", data = { priority = 1, target = ".", value = "alpn=\"h3,h2\"" } }]
+        OPENPGPKEY = [{ content = "mQINBGE" }]
+      }
+      "_ftp._tcp" = {
+        URI = [{ priority = 10, data = { weight = 1, target = "ftp://ftp.example.com/" } }]
+      }
+      "_25._tcp.mail" = {
+        TLSA = [{ key = "mx", data = { usage = 3, selector = 1, matching_type = 1, certificate = "abcdef" } }]
+      }
+      "office" = {
+        LOC = [{ key = "hq", data = { lat_degrees = 59, lat_minutes = 26, lat_seconds = 14, lat_direction = "N", long_degrees = 24, long_minutes = 44, long_seconds = 43, long_direction = "E" } }]
+      }
+    }
+  }
+
+  assert {
+    condition     = output.flat_records["_sip._tcp SRV ${substr(sha1(jsonencode({ priority = "10", weight = "5", port = "5060", target = "sip.example.com" })), 0, 12)}"].priority == 10
+    error_message = "SRV key is a hash of the data, priority comes from the data"
+  }
+
+  assert {
+    condition     = output.flat_records["@ HTTPS h3"].content == null && output.flat_records["@ HTTPS h3"].data.target == "." && output.flat_records["@ HTTPS h3"].priority == null
+    error_message = "HTTPS"
+  }
+
+  assert {
+    condition     = output.flat_records["@ OPENPGPKEY mQINBGE"].content == "mQINBGE" && output.flat_records["@ OPENPGPKEY mQINBGE"].data == null
+    error_message = "OPENPGPKEY uses content"
+  }
+
+  assert {
+    condition     = one([for k, r in output.flat_records : r.priority if r.type == "URI"]) == 10
+    error_message = "URI priority"
+  }
+
+  assert {
+    condition     = output.flat_records["_25._tcp.mail TLSA mx"].data.usage == "3" && output.flat_records["office LOC hq"].data.lat_direction == "N"
+    error_message = "TLSA and LOC data"
+  }
+}
+
+run "data_on_content_type" {
+  command = plan
+
+  variables {
+    records = { "app" = { A = [{ content = "1.2.3.4", data = { target = "x" } }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "srv_without_data" {
+  command = plan
+
+  variables {
+    records = { "_sip._tcp" = { SRV = [{ content = "sip.example.com" }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "srv_missing_field" {
+  command = plan
+
+  variables {
+    records = { "_sip._tcp" = { SRV = [{ data = { priority = 10, weight = 5, target = "sip.example.com" } }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "srv_unknown_field" {
+  command = plan
+
+  variables {
+    records = { "_sip._tcp" = { SRV = [{ data = { priority = 10, weight = 5, port = 5060, target = "sip.example.com", proto = "_tcp" } }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "uri_without_priority" {
+  command = plan
+
+  variables {
+    records = { "_ftp._tcp" = { URI = [{ data = { weight = 1, target = "ftp://ftp.example.com/" } }] } }
   }
 
   expect_failures = [var.records]

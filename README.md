@@ -9,6 +9,7 @@ A flexible Terraform module to manage Cloudflare DNS records using a structured 
 - 🛠 **Hybrid Names**: Support for nested subdomains like `_acme-challenge.app`.
 - ☁️ **Cloudflare Optimized**: Automatic `TTL = 1` for proxied records.
 - 🛡 **CAA Support**: Proper handling of CAA tags, flags, and values.
+- 🧩 **All Record Types**: `SRV`, `URI`, `HTTPS`, `SVCB`, `TLSA`, `SSHFP`, `DS`, `LOC` and other structured records through a single `data` map.
 - 🔀 **Provider v4 and v5**: The same input schema for both major versions of the Cloudflare provider.
 - ✅ **Input Validation**: Mistakes in record types, TTL, MX or CAA fields fail at `plan`, before reaching the Cloudflare API.
 
@@ -40,7 +41,7 @@ If `zone_name` is not set, the module looks up the zone by `zone_id`, so the API
 ```hcl
 module "dns" {
   # Use //modules/dns/v4 for Cloudflare provider v4
-  source = "git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git//modules/dns/v5?ref=v2.0.0"
+  source = "git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git//modules/dns/v5?ref=v2.1.0"
 
   zone_id   = var.zone_id
   zone_name = "example.com" # optional, looked up from zone_id when omitted
@@ -96,6 +97,14 @@ module "dns" {
         { content = "static" },
       ]
     }
+
+    # Structured records use data instead of content
+    # Result: SRV record for _sip._tcp.example.com
+    "_sip._tcp" = {
+      SRV = [
+        { data = { priority = 10, weight = 5, port = 5060, target = "sip.example.com" } },
+      ]
+    }
   }
 }
 ```
@@ -107,7 +116,39 @@ Complete runnable configurations are available in [`examples/v4`](examples/v4) a
 The module flattens the input map into a single map with a unique key for each record, which is then used in `for_each`.
 
 ### Record Types and Nested Names
-Each key inside a base name block is a record type (`A`, `AAAA`, `CNAME`, `TXT`, `MX`, `CAA`, ...). A key with a dot-notation (like `"_acme-challenge.TXT"`) is split: the last part is the record type, everything before it is prepended to the base name. Inside the `@` block the prefix becomes the record name itself (`"_dmarc.TXT"` becomes `_dmarc.example.com`).
+Each key inside a base name block is a record type (`A`, `AAAA`, `CNAME`, `TXT`, `MX`, `CAA`, `SRV`, ...; see [Record Types](#record-types)). A key with a dot-notation (like `"_acme-challenge.TXT"`) is split: the last part is the record type, everything before it is prepended to the base name. Inside the `@` block the prefix becomes the record name itself (`"_dmarc.TXT"` becomes `_dmarc.example.com`).
+
+### Record Types
+
+Most records are defined by `content`. Structured records are defined by a `data` map instead, with the same fields as in the Cloudflare API:
+
+| Type | Defined by | `data` fields (optional in italics) |
+|------|-----------|--------------------------------------|
+| `A`, `AAAA`, `CNAME`, `NS`, `PTR`, `TXT` | `content` | - |
+| `MX` | `content`, `priority` | - |
+| `OPENPGPKEY` | `content` | - (provider v5 only) |
+| `CAA` | `content`, `tag`, `flags` | - |
+| `SRV` | `data` | `priority`, `weight`, `port`, `target` |
+| `URI` | `data`, `priority` | `weight`, `target` |
+| `HTTPS`, `SVCB` | `data` | `priority`, `target`, *`value`* |
+| `TLSA`, `SMIMEA` | `data` | `usage`, `selector`, `matching_type`, `certificate` |
+| `SSHFP` | `data` | `algorithm`, `type`, `fingerprint` |
+| `DS` | `data` | `key_tag`, `algorithm`, `digest_type`, `digest` |
+| `DNSKEY` | `data` | `flags`, `protocol`, `algorithm`, `public_key` |
+| `CERT` | `data` | `type`, `key_tag`, `algorithm`, `certificate` |
+| `NAPTR` | `data` | `order`, `preference`, `replacement`, *`flags`*, *`service`*, *`regex`* |
+| `LOC` | `data` | `lat_degrees`, `lat_minutes`, `lat_seconds`, `lat_direction`, `long_degrees`, `long_minutes`, `long_seconds`, `long_direction`, *`altitude`*, *`size`*, *`precision_horz`*, *`precision_vert`* |
+
+The service and protocol of `SRV`, `URI` and `TLSA` records are part of the name:
+
+```hcl
+"_sip._tcp" = {
+  SRV = [{ data = { priority = 10, weight = 5, port = 5060, target = "sip.example.com" } }]
+}
+"mail" = {
+  "_25._tcp.TLSA" = [{ key = "mx", data = { usage = 3, selector = 1, matching_type = 1, certificate = "..." } }]
+}
+```
 
 ### The `ALIASES` Logic
 When you define `ALIASES` inside a block (e.g., inside `"app"`), the module creates a `CNAME` record for each entry where:
@@ -124,6 +165,7 @@ Each record is keyed in the state by its content, in the zone file format `<name
 |--------|-----|
 | `A`, `AAAA`, `MX`, `NS`, `PTR` | `app A 30.40.50.60`, `@ MX mail.example.com` |
 | `TXT` | `_dmarc TXT 21541c4e7044` (first 12 characters of the SHA-1 of the value) |
+| Records with `data` (`SRV`, `TLSA`, ...) | `_sip._tcp SRV 9c61601f99e8` (first 12 characters of the SHA-1 of the data) |
 | `CNAME` and `ALIASES` | `www CNAME` (only one CNAME is allowed per name) |
 | `CAA` | `app CAA issue letsencrypt.org` |
 | Any record with `key` | `google._domainkey TXT dkim` |
@@ -146,11 +188,12 @@ Two records that produce the same key (e.g. the same value listed twice, or a `C
 
 The `records` input is validated before any API call:
 
-- Supported record types: `A`, `AAAA`, `CNAME`, `MX`, `NS`, `PTR`, `TXT`, `CAA` and `ALIASES` (with an optional prefix, e.g. `"_acme-challenge.TXT"`)
-- Every record must have a non-empty `content`
+- Supported record types: see [Record Types](#record-types), plus `ALIASES` (with an optional prefix, e.g. `"_acme-challenge.TXT"`)
+- Records defined by `content` must have a non-empty `content`
+- Structured records must have `data` with only the fields of their type and all required ones; other records must not set `data`
 - `ttl` must be `1` (automatic) or between `30` and `86400`
 - Only `A`, `AAAA`, `CNAME` and `ALIASES` records can be `proxied`
-- `MX` records require `priority`
+- `MX` and `URI` records require `priority`
 - `CAA` records require `tag`: `issue`, `issuewild` or `iodef`
 - `key` must not contain whitespace
 - Record keys must be unique
@@ -170,9 +213,10 @@ The `records` input is validated before any API call:
 | `content` | IP address, hostname, or text value | `null` |
 | `ttl` | Time to Live (automatically set to `1` if proxied) | `3600` |
 | `proxied` | Whether the record gets Cloudflare's proxy | `false` |
-| `priority` | Priority for MX records | `null` |
+| `priority` | Priority for MX and URI records | `null` |
 | `tag` | Tag for CAA records (`issue`, `issuewild`, `iodef`) | `null` |
 | `flags` | Flags for CAA records | `0` |
+| `data` | Fields of structured records, see [Record Types](#record-types) | `null` |
 | `key` | Stable key used instead of the value in the record key, see [Record Keys](#record-keys) | `null` |
 
 ## Outputs

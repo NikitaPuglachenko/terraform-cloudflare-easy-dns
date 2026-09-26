@@ -18,6 +18,9 @@ variable "records" {
           tag   = optional(string)
           flags = optional(number, 0)
 
+          # Structured data for SRV, URI, HTTPS, SVCB, TLSA, SMIMEA, SSHFP, DS, DNSKEY, CERT, NAPTR and LOC
+          data = optional(map(string))
+
           # Stable key instead of the record value, so changing the value updates the record in place
           key = optional(string)
         })
@@ -29,12 +32,15 @@ variable "records" {
     condition = alltrue(flatten([
       for base_name, type_map in var.records : [
         for raw_key, recs in type_map : contains(
-          ["A", "AAAA", "CNAME", "MX", "NS", "PTR", "TXT", "CAA", "ALIASES"],
+          [
+            "A", "AAAA", "CNAME", "MX", "NS", "PTR", "TXT", "OPENPGPKEY", "CAA", "ALIASES",
+            "CERT", "DNSKEY", "DS", "HTTPS", "LOC", "NAPTR", "SMIMEA", "SRV", "SSHFP", "SVCB", "TLSA", "URI",
+          ],
           element(split(".", raw_key), length(split(".", raw_key)) - 1)
         )
       ]
     ]))
-    error_message = "Supported record types are A, AAAA, CNAME, MX, NS, PTR, TXT, CAA and ALIASES (optionally with a prefix, e.g. \"_acme-challenge.TXT\")."
+    error_message = "Unsupported record type. Supported: A, AAAA, CNAME, MX, NS, PTR, TXT, OPENPGPKEY, CAA, ALIASES, CERT, DNSKEY, DS, HTTPS, LOC, NAPTR, SMIMEA, SRV, SSHFP, SVCB, TLSA and URI (optionally with a prefix, e.g. \"_acme-challenge.TXT\")."
   }
 
   validation {
@@ -42,10 +48,72 @@ variable "records" {
       for base_name, type_map in var.records : [
         for raw_key, recs in type_map : [
           for rec in recs : rec.content != null && rec.content != ""
+        ] if !contains(["CERT", "DNSKEY", "DS", "HTTPS", "LOC", "NAPTR", "SMIMEA", "SRV", "SSHFP", "SVCB", "TLSA", "URI"], element(split(".", raw_key), length(split(".", raw_key)) - 1))
+      ]
+    ]))
+    error_message = "Every record except SRV, URI, HTTPS, SVCB, TLSA, SMIMEA, SSHFP, DS, DNSKEY, CERT, NAPTR and LOC must have a non-empty content."
+  }
+
+  validation {
+    condition = alltrue(flatten([
+      for base_name, type_map in var.records : [
+        for raw_key, recs in type_map : [
+          for rec in recs : (
+            contains(["CERT", "DNSKEY", "DS", "HTTPS", "LOC", "NAPTR", "SMIMEA", "SRV", "SSHFP", "SVCB", "TLSA", "URI"], element(split(".", raw_key), length(split(".", raw_key)) - 1))
+            ? rec.data != null && length(coalesce(rec.data, {})) > 0
+            : rec.data == null
+          )
         ]
       ]
     ]))
-    error_message = "Every record must have a non-empty content."
+    error_message = "SRV, URI, HTTPS, SVCB, TLSA, SMIMEA, SSHFP, DS, DNSKEY, CERT, NAPTR and LOC records require data; other record types must not set it."
+  }
+
+  validation {
+    condition = alltrue(flatten([
+      for base_name, type_map in var.records : [
+        for raw_key, recs in type_map : [
+          for rec in recs : (
+            length(setsubtract(keys(coalesce(rec.data, {})), lookup({
+              SRV    = ["priority", "weight", "port", "target"]
+              URI    = ["weight", "target"]
+              HTTPS  = ["priority", "target", "value"]
+              SVCB   = ["priority", "target", "value"]
+              TLSA   = ["usage", "selector", "matching_type", "certificate"]
+              SMIMEA = ["usage", "selector", "matching_type", "certificate"]
+              SSHFP  = ["algorithm", "type", "fingerprint"]
+              DS     = ["key_tag", "algorithm", "digest_type", "digest"]
+              DNSKEY = ["flags", "protocol", "algorithm", "public_key"]
+              CERT   = ["type", "key_tag", "algorithm", "certificate"]
+              NAPTR  = ["order", "preference", "flags", "service", "regex", "replacement"]
+              LOC = [
+                "lat_degrees", "lat_minutes", "lat_seconds", "lat_direction",
+                "long_degrees", "long_minutes", "long_seconds", "long_direction",
+                "altitude", "size", "precision_horz", "precision_vert",
+              ]
+            }, element(split(".", raw_key), length(split(".", raw_key)) - 1), []))) == 0
+            && length(setsubtract(lookup({
+              SRV    = ["priority", "weight", "port", "target"]
+              URI    = ["weight", "target"]
+              HTTPS  = ["priority", "target"]
+              SVCB   = ["priority", "target"]
+              TLSA   = ["usage", "selector", "matching_type", "certificate"]
+              SMIMEA = ["usage", "selector", "matching_type", "certificate"]
+              SSHFP  = ["algorithm", "type", "fingerprint"]
+              DS     = ["key_tag", "algorithm", "digest_type", "digest"]
+              DNSKEY = ["flags", "protocol", "algorithm", "public_key"]
+              CERT   = ["type", "key_tag", "algorithm", "certificate"]
+              NAPTR  = ["order", "preference", "replacement"]
+              LOC = [
+                "lat_degrees", "lat_minutes", "lat_seconds", "lat_direction",
+                "long_degrees", "long_minutes", "long_seconds", "long_direction",
+              ]
+            }, element(split(".", raw_key), length(split(".", raw_key)) - 1), []), keys(coalesce(rec.data, {})))) == 0
+          )
+        ] if contains(["CERT", "DNSKEY", "DS", "HTTPS", "LOC", "NAPTR", "SMIMEA", "SRV", "SSHFP", "SVCB", "TLSA", "URI"], element(split(".", raw_key), length(split(".", raw_key)) - 1))
+      ]
+    ]))
+    error_message = "Record data has unknown or missing fields. See \"Record Types\" in the README for the fields of each type."
   }
 
   validation {
@@ -78,10 +146,10 @@ variable "records" {
       for base_name, type_map in var.records : [
         for raw_key, recs in type_map : [
           for rec in recs : rec.priority != null
-        ] if element(split(".", raw_key), length(split(".", raw_key)) - 1) == "MX"
+        ] if contains(["MX", "URI"], element(split(".", raw_key), length(split(".", raw_key)) - 1))
       ]
     ]))
-    error_message = "MX records require a priority."
+    error_message = "MX and URI records require a priority."
   }
 
   validation {

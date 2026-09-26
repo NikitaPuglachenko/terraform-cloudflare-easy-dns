@@ -1,4 +1,7 @@
 locals {
+  # Record types defined by structured data instead of content
+  data_types = ["CERT", "DNSKEY", "DS", "HTTPS", "LOC", "NAPTR", "SMIMEA", "SRV", "SSHFP", "SVCB", "TLSA", "URI"]
+
   # One entry per record in the input, with the parts of its key split out:
   # "_acme-challenge.TXT" -> prefix "_acme-challenge", kind "TXT"
   entries = flatten([
@@ -43,17 +46,21 @@ locals {
         r.type == "CNAME" ? "${r.name} CNAME" :
         r.type == "CAA" ? "${r.name} CAA ${r.rec.tag} ${r.content}" :
         r.type == "TXT" ? "${r.name} TXT ${substr(sha1(r.content), 0, 12)}" :
+        contains(local.data_types, r.type) ? "${r.name} ${r.type} ${substr(sha1(jsonencode(r.rec.data)), 0, 12)}" :
         "${r.name} ${r.type} ${r.content}"
       )
       old_key  = r.old_key
       name     = r.name
       type     = r.type
-      content  = r.content
+      content  = r.type == "CAA" || contains(local.data_types, r.type) ? null : r.content
       ttl      = r.rec.ttl
       proxied  = r.rec.proxied
-      priority = r.rec.priority
-      tag      = r.rec.tag
-      flags    = r.rec.flags
+      priority = contains(["MX", "URI"], r.type) ? r.rec.priority : r.type == "SRV" ? tonumber(r.rec.data.priority) : null
+      data = (
+        r.type == "CAA" ? tomap({ flags = tostring(r.rec.flags), tag = r.rec.tag, value = r.content }) :
+        contains(local.data_types, r.type) ? r.rec.data :
+        null
+      )
     }
   ]
 
@@ -68,8 +75,7 @@ locals {
       ttl      = group[0].ttl
       proxied  = group[0].proxied
       priority = group[0].priority
-      tag      = group[0].tag
-      flags    = group[0].flags
+      data     = group[0].data
     }
   }
 
