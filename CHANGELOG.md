@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-09-26
+
+### Added
+
+- Unknown record attributes fail at `plan` with the record and the attribute, e.g. `records["app"]["A"][0]: unknown attribute "proxid"`, also inside `settings`; before, Terraform silently dropped them, so a misspelled optional attribute was ignored
+
+### Changed
+
+- The `records` input of the root module and the wrappers has the type `any`, so unknown attributes reach the check; the record schema is in the input description and the README, and the records module still converts the value to the typed structure
+
 ## [2.5.3] - 2026-09-26
 
 ### Fixed
@@ -127,7 +137,8 @@ All notable changes to this project are documented in this file. The format is b
 - Inline aliases pointed to a relative name instead of the full hostname
 - Zone apex (`@`) handling for aliases and nested names
 
-[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.5.3...HEAD
+[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.6.0...HEAD
+[2.6.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.5.3...v2.6.0
 [2.5.3]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.5.2...v2.5.3
 [2.5.2]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.5.1...v2.5.2
 [2.5.1]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.5.0...v2.5.1

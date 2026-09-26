@@ -10,40 +10,45 @@ variable "zone_name" {
 }
 
 variable "records" {
-  description = "DNS records grouped by base name (subdomain or @ for apex), then by record type"
-  type = map(
-    map(
-      list(
-        object({
-          content  = optional(string)
-          ttl      = optional(number) # default_ttl when not set
-          proxied  = optional(bool)   # default_proxied when not set
-          priority = optional(number)
+  description = <<-EOT
+    DNS records: records[NAME][TYPE] = [RECORD, ...], where NAME is a name within the
+    zone (@ for the apex) and TYPE a record type, optionally with a prefix
+    ("_acme-challenge.TXT"). Record attributes: content, ttl, proxied, priority, tag, flags,
+    data, key, comment, tags and settings (flatten_cname, ipv4_only, ipv6_only). See the
+    README for the details. Unknown attributes fail at plan.
+  EOT
+  # Not a typed object: Terraform silently drops unknown attributes when converting to an
+  # object type, so misspelled attributes are checked here and the typed structure is
+  # built by the records module
+  type = any
 
-          # for CAA
-          tag   = optional(string)
-          flags = optional(number, 0)
-
-          # Structured data for SRV, URI, HTTPS, SVCB, TLSA, SMIMEA, SSHFP, DS, DNSKEY, CERT, NAPTR and LOC
-          data = optional(map(string))
-
-          # Stable key instead of the record value, so changing the value updates the record in place
-          key = optional(string)
-
-          # Shown in the Cloudflare dashboard: comment replaces default_comment, tags are added to default_tags
-          comment = optional(string)
-          tags    = optional(list(string))
-
-          # Record settings, provider v5 only (ignored by the v4 wrapper)
-          settings = optional(object({
-            flatten_cname = optional(bool)
-            ipv4_only     = optional(bool)
-            ipv6_only     = optional(bool)
-          }))
-        })
-      )
+  validation {
+    condition = try(alltrue(flatten([
+      for name, types in var.records : [
+        for type, list in types : [
+          for record in list : (
+            can(keys(record))
+            && length(setsubtract(keys(record), ["content", "ttl", "proxied", "priority", "tag", "flags", "data", "key", "comment", "tags", "settings"])) == 0
+            && (try(record.settings, null) == null || length(setsubtract(try(keys(record.settings), ["?"]), ["flatten_cname", "ipv4_only", "ipv6_only"])) == 0)
+          )
+        ]
+      ]
+    ])), false)
+    error_message = try(
+      "Invalid records (allowed attributes: content, ttl, proxied, priority, tag, flags, data, key, comment, tags, settings):\n${join("\n", flatten([
+        for name, types in var.records : [
+          for type, list in types : [
+            for index, record in list : concat(
+              can(keys(record)) ? [] : ["records[\"${name}\"][\"${type}\"][${index}] must be an object"],
+              [for attribute in setsubtract(try(keys(record), []), ["content", "ttl", "proxied", "priority", "tag", "flags", "data", "key", "comment", "tags", "settings"]) : "records[\"${name}\"][\"${type}\"][${index}]: unknown attribute \"${attribute}\""],
+              [for attribute in setsubtract(try(keys(record.settings), []), ["flatten_cname", "ipv4_only", "ipv6_only"]) : "records[\"${name}\"][\"${type}\"][${index}].settings: unknown attribute \"${attribute}\""]
+            )
+          ]
+        ]
+      ]))}",
+      "records must be a map of names to maps of record types to lists of records."
     )
-  )
+  }
 }
 
 variable "default_ttl" {
