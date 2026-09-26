@@ -19,6 +19,7 @@ All notable changes to this project are documented in this file. The format is b
 ### Changed
 
 - `examples/v5` uses the root module, like the Registry source
+- README: a table of contents, the detailed "How It Works" is now "Record Model", and the upgrade and migration guides are one section with the order of the steps and a guide for unknown attributes when upgrading to 2.6
 - The `records` input of the root module and the wrappers has the type `any`, so unknown attributes reach the check; the record schema is in the input description and the README, and the records module still converts the value to the typed structure
 
 ## [2.5.3] - 2026-09-26
