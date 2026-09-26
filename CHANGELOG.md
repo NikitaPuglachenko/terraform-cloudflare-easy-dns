@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-26
+
 ### Added
 
 - Validation of the `records` input: supported record types, non-empty `content`, TTL range, `proxied` only for `A`/`AAAA`/`CNAME`/`ALIASES`, `priority` for `MX`, `tag` for `CAA`
@@ -35,5 +37,6 @@ All notable changes to this project are documented in this file. The format is b
 - Inline aliases pointed to a relative name instead of the full hostname
 - Zone apex (`@`) handling for aliases and nested names
 
-[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/releases/tag/v1.0.0
