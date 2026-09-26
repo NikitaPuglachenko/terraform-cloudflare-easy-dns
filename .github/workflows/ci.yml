@@ -18,6 +18,8 @@ jobs:
         with:
           terraform_wrapper: false
       - run: terraform fmt -check -recursive -diff
+      - name: Check that the root module and the wrappers have the same interface
+        run: ./scripts/check-sync.sh
 
   test:
     name: Validate and test (${{ matrix.dir }}, terraform ${{ matrix.terraform }})
@@ -26,6 +28,7 @@ jobs:
       fail-fast: false
       matrix:
         dir:
+          - .
           - modules/dns/records
           - modules/dns/v4
           - modules/dns/v5
