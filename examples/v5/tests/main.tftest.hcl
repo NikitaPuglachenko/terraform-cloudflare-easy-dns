@@ -8,7 +8,7 @@ run "plan" {
   command = plan
 
   assert {
-    condition     = length(module.dns.record_names) == 13
+    condition     = length(module.dns.record_names) == 14
     error_message = "Unexpected number of records"
   }
 }

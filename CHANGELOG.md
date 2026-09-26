@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-09-26
+
+### Added
+
+- Record types `SRV`, `URI`, `HTTPS`, `SVCB`, `TLSA`, `SMIMEA`, `SSHFP`, `DS`, `DNSKEY`, `CERT`, `NAPTR` and `LOC` through the new `data` field, and `OPENPGPKEY` (provider v5)
+- Validation of `data` fields for each record type
+- `URI` records require `priority`
+
+### Changed
+
+- Wrapper tests cover only the mapping to the provider resource; record parsing is tested in the core module
+
 ## [2.0.0] - 2026-09-26
 
 ### Changed
@@ -49,7 +61,8 @@ All notable changes to this project are documented in this file. The format is b
 - Inline aliases pointed to a relative name instead of the full hostname
 - Zone apex (`@`) handling for aliases and nested names
 
-[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v1.1.0...v2.0.0
 [1.1.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/releases/tag/v1.0.0

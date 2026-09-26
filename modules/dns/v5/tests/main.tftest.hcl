@@ -1,3 +1,6 @@
+# Record parsing, aliases and validation are covered by the tests of modules/dns/records.
+# These tests cover only how records are mapped to the provider resource.
+
 mock_provider "cloudflare" {
   override_data {
     target = data.cloudflare_zone.this[0]
@@ -9,19 +12,17 @@ variables {
   zone_id   = "z"
   zone_name = "example.com"
   records = {
-    "@" = {
-      ALIASES        = [{ content = "root-alias" }]
-      "_dmarc.TXT"   = [{ content = "v=DMARC1" }]
-      "mail.ALIASES" = [{ content = "m2" }]
-    }
     "app" = {
-      A                     = [{ content = "30.40.50.60", proxied = true }]
-      TXT                   = [{ content = "v=spf1 ~all" }]
-      ALIASES               = [{ content = "support", ttl = 1800 }]
-      "_acme-challenge.TXT" = [{ content = "tok" }]
-      "www.ALIASES"         = [{ content = "w2" }]
-      CAA                   = [{ content = "letsencrypt.org", tag = "issue" }]
-      MX                    = [{ content = "mx.example.com", priority = 5 }]
+      A       = [{ content = "30.40.50.60", proxied = true }]
+      TXT     = [{ content = "v=spf1 ~all", key = "spf" }]
+      MX      = [{ content = "mx.example.com", priority = 5 }]
+      CAA     = [{ content = "letsencrypt.org", tag = "issue" }]
+      ALIASES = [{ content = "support" }]
+      DNSKEY  = [{ data = { flags = 257, protocol = 3, algorithm = 13, public_key = "abc" } }]
+      NAPTR   = [{ data = { order = 100, preference = 10, flags = "U", service = "E2U+sip", regex = "!^.*0sip:info@example.com!", replacement = "." } }]
+    }
+    "_sip._tcp" = {
+      SRV = [{ key = "sip", data = { priority = 10, weight = 5, port = 5060, target = "sip.example.com" } }]
     }
   }
 }
@@ -35,33 +36,33 @@ run "plan" {
   }
 
   assert {
-    condition     = cloudflare_dns_record.record["app TXT ${substr(sha1("v=spf1 ~all"), 0, 12)}"].ttl == 3600 && cloudflare_dns_record.record["app TXT ${substr(sha1("v=spf1 ~all"), 0, 12)}"].proxied == false
-    error_message = "Defaults"
+    condition     = cloudflare_dns_record.record["app TXT spf"].ttl == 3600 && cloudflare_dns_record.record["app TXT spf"].priority == null
+    error_message = "Default TTL, no priority for TXT"
   }
 
   assert {
-    condition     = cloudflare_dns_record.record["support CNAME"].content == "app.example.com" && cloudflare_dns_record.record["support CNAME"].ttl == 1800
-    error_message = "Alias"
+    condition     = cloudflare_dns_record.record["app MX mx.example.com"].priority == 5
+    error_message = "MX priority"
   }
 
   assert {
-    condition     = cloudflare_dns_record.record["w2 CNAME"].content == "www.app.example.com" && cloudflare_dns_record.record["m2 CNAME"].content == "mail.example.com"
-    error_message = "Inline alias"
+    condition     = cloudflare_dns_record.record["app CAA issue letsencrypt.org"].data.tag == "issue" && cloudflare_dns_record.record["app CAA issue letsencrypt.org"].data.flags == 0
+    error_message = "CAA data"
   }
 
   assert {
-    condition     = cloudflare_dns_record.record["root-alias CNAME"].content == "example.com"
-    error_message = "Apex alias"
+    condition     = cloudflare_dns_record.record["_sip._tcp SRV sip"].priority == 10 && cloudflare_dns_record.record["_sip._tcp SRV sip"].data.port == 5060 && cloudflare_dns_record.record["_sip._tcp SRV sip"].data.target == "sip.example.com"
+    error_message = "SRV data and priority"
   }
 
   assert {
-    condition     = cloudflare_dns_record.record["app CAA issue letsencrypt.org"].data.tag == "issue"
-    error_message = "CAA"
+    condition     = cloudflare_dns_record.record["app DNSKEY ${substr(sha1(jsonencode({ flags = "257", protocol = "3", algorithm = "13", public_key = "abc" })), 0, 12)}"].data.flags == 257
+    error_message = "DNSKEY flags"
   }
 
   assert {
-    condition     = cloudflare_dns_record.record["app MX mx.example.com"].priority == 5 && cloudflare_dns_record.record["app TXT ${substr(sha1("v=spf1 ~all"), 0, 12)}"].priority == null
-    error_message = "Priority only for MX"
+    condition     = one([for k, r in cloudflare_dns_record.record : r.data.flags if r.type == "NAPTR"]) == "U"
+    error_message = "NAPTR flags"
   }
 }
 

@@ -20,19 +20,53 @@ resource "cloudflare_dns_record" "record" {
   zone_id = var.zone_id
   name    = each.value.name
   type    = each.value.type
-
-  content = each.value.type == "CAA" ? null : each.value.content
+  content = each.value.content
 
   ttl = each.value.proxied ? 1 : each.value.ttl
 
-  proxied  = each.value.type == "CAA" ? null : each.value.proxied
-  priority = each.value.type == "MX" ? each.value.priority : null
+  # Records with structured data (CAA, SRV, ...) cannot be proxied
+  proxied  = each.value.data == null ? each.value.proxied : null
+  priority = each.value.priority
 
-  data = each.value.type == "CAA" ? {
-    flags = each.value.flags
-    tag   = each.value.tag
-    value = each.value.content
-  } : null
+  # Numeric flags (CAA, DNSKEY) are sent as numbers, NAPTR flags as a string
+  data = each.value.data == null ? null : {
+    algorithm      = lookup(each.value.data, "algorithm", null)
+    altitude       = lookup(each.value.data, "altitude", null)
+    certificate    = lookup(each.value.data, "certificate", null)
+    digest         = lookup(each.value.data, "digest", null)
+    digest_type    = lookup(each.value.data, "digest_type", null)
+    fingerprint    = lookup(each.value.data, "fingerprint", null)
+    flags          = try(tonumber(each.value.data["flags"]), lookup(each.value.data, "flags", null))
+    key_tag        = lookup(each.value.data, "key_tag", null)
+    lat_degrees    = lookup(each.value.data, "lat_degrees", null)
+    lat_direction  = lookup(each.value.data, "lat_direction", null)
+    lat_minutes    = lookup(each.value.data, "lat_minutes", null)
+    lat_seconds    = lookup(each.value.data, "lat_seconds", null)
+    long_degrees   = lookup(each.value.data, "long_degrees", null)
+    long_direction = lookup(each.value.data, "long_direction", null)
+    long_minutes   = lookup(each.value.data, "long_minutes", null)
+    long_seconds   = lookup(each.value.data, "long_seconds", null)
+    matching_type  = lookup(each.value.data, "matching_type", null)
+    order          = lookup(each.value.data, "order", null)
+    port           = lookup(each.value.data, "port", null)
+    precision_horz = lookup(each.value.data, "precision_horz", null)
+    precision_vert = lookup(each.value.data, "precision_vert", null)
+    preference     = lookup(each.value.data, "preference", null)
+    priority       = lookup(each.value.data, "priority", null)
+    protocol       = lookup(each.value.data, "protocol", null)
+    public_key     = lookup(each.value.data, "public_key", null)
+    regex          = lookup(each.value.data, "regex", null)
+    replacement    = lookup(each.value.data, "replacement", null)
+    selector       = lookup(each.value.data, "selector", null)
+    service        = lookup(each.value.data, "service", null)
+    size           = lookup(each.value.data, "size", null)
+    tag            = lookup(each.value.data, "tag", null)
+    target         = lookup(each.value.data, "target", null)
+    type           = lookup(each.value.data, "type", null)
+    usage          = lookup(each.value.data, "usage", null)
+    value          = lookup(each.value.data, "value", null)
+    weight         = lookup(each.value.data, "weight", null)
+  }
 }
 
 # Migration from the v4 module: state of cloudflare_record is moved without recreating records
