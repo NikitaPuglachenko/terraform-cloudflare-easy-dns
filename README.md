@@ -332,7 +332,7 @@ A service advertised with SRV:
 
 When the zone already has records, the first `apply` would fail with "record already exists" for each of them. With provider v5, the module can find the existing records and adopt them into the state instead:
 
-1. Set `import_existing = true`. The module then reads all records of the zone (the API token needs the `DNS Read` permission) and matches them to the configured records by name, type and value.
+1. Set `import_existing = true`. The module then reads the records of the zone (the API token needs the `DNS Read` permission) and matches them to the configured records by name, type and value. The records are read with one request per record type of the configuration, which avoids a provider crash on zones with CAA records ([cloudflare/terraform-provider-cloudflare#7004](https://github.com/cloudflare/terraform-provider-cloudflare/issues/7004)).
 2. Add an `import` block next to the module call:
 
    ```hcl
@@ -393,7 +393,7 @@ The v5 wrapper contains a `moved` block from `cloudflare_record` to `cloudflare_
 1. Upgrade the Cloudflare provider to `~> 5.26`.
 2. Change the module `source` from `//modules/dns/v4` to `//modules/dns/v5`, keeping the module name the same. To go straight to the root module, also add the `moved` block from [Switching from the v5 Submodule to the Root Module](#switching-from-the-v5-submodule-to-the-root-module), with `cloudflare_record` in `from`.
 3. Run `terraform init -upgrade` and `terraform plan`. The plan should only show moved resources, without destroying or creating records; provider v5 also plans a one-time in-place update of the moved records (e.g. CAA `flags` become numbers). Review it carefully before applying.
-4. Run `terraform apply`. Provider v5 (checked with 5.26) may report `Provider produced inconsistent result after apply` with `.modified_on` for some records: the timestamp in the migrated state has a different precision. The records are updated anyway; run `terraform plan` again, it should show no changes.
+4. Run `terraform apply`. Provider v5 (checked with 5.26) may report `Provider produced inconsistent result after apply` with `.modified_on` for some records: the timestamp in the migrated state has a different precision ([cloudflare/terraform-provider-cloudflare#7387](https://github.com/cloudflare/terraform-provider-cloudflare/issues/7387)). The records are updated anyway; run `terraform plan` again, it should show no changes.
 
 ## Testing
 

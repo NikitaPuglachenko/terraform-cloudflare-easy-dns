@@ -12,7 +12,8 @@ locals {
 }
 
 # One lookup per record type: the provider returns data.flags as a number for CAA and
-# DNSKEY and as null for other types, and a list mixing both makes Terraform crash
+# DNSKEY and as null for other types, and a list mixing both makes Terraform crash.
+# Can be a single lookup once https://github.com/cloudflare/terraform-provider-cloudflare/issues/7004 is fixed
 data "cloudflare_dns_records" "existing" {
   for_each = var.import_existing ? local.import_types : toset([])
 
