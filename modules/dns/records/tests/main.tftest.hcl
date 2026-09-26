@@ -278,3 +278,40 @@ run "uri_without_priority" {
 
   expect_failures = [var.records]
 }
+
+run "cname_conflict" {
+  command = plan
+
+  variables {
+    records = {
+      "app" = { A = [{ content = "1.2.3.4" }] }
+      "@"   = { ALIASES = [{ content = "App" }] }
+    }
+  }
+
+  expect_failures = [output.flat_records]
+}
+
+run "cname_at_apex_with_other_records" {
+  command = plan
+
+  variables {
+    records = {
+      "@" = {
+        CNAME = [{ content = "target.example.net" }]
+        TXT   = [{ content = "v=spf1 -all" }]
+        MX    = [{ content = "mx.example.com", priority = 1 }]
+      }
+      # A prefixed name is a different name, not a conflict
+      "app" = {
+        CNAME    = [{ content = "target.example.net" }]
+        "_x.TXT" = [{ content = "y" }]
+      }
+    }
+  }
+
+  assert {
+    condition     = length(output.flat_records) == 5
+    error_message = "CNAME at the apex must be allowed together with other records"
+  }
+}

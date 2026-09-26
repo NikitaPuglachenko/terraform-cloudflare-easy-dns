@@ -41,7 +41,7 @@ If `zone_name` is not set, the module looks up the zone by `zone_id`, so the API
 ```hcl
 module "dns" {
   # Use //modules/dns/v4 for Cloudflare provider v4
-  source = "git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git//modules/dns/v5?ref=v2.1.0"
+  source = "git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git//modules/dns/v5?ref=v2.2.0"
 
   zone_id   = var.zone_id
   zone_name = "example.com" # optional, looked up from zone_id when omitted
@@ -182,7 +182,7 @@ Since the value is a part of the key, changing it replaces the record. For value
 ]
 ```
 
-Two records that produce the same key (e.g. the same value listed twice, or a `CNAME` and an alias with the same name) fail at `plan` with the list of duplicates.
+Two records that produce the same key (e.g. the same value listed twice, or a `CNAME` and an alias with the same name) fail at `plan` with the list of duplicates and where each of them is defined.
 
 ## Validation
 
@@ -196,7 +196,8 @@ The `records` input is validated before any API call:
 - `MX` and `URI` records require `priority`
 - `CAA` records require `tag`: `issue`, `issuewild` or `iodef`
 - `key` must not contain whitespace
-- Record keys must be unique
+- Record keys must be unique. The error shows where each duplicate is defined, e.g. `"_acme-challenge.app TXT 79bead8e6d65" from records["_acme-challenge.app"]["TXT"][0] and records["app"]["_acme-challenge.TXT"][0]`
+- A `CNAME` (including `ALIASES`) cannot share its name with other records, except at the zone apex `@` where Cloudflare uses CNAME flattening
 
 ## Inputs
 

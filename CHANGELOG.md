@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-09-26
+
+### Added
+
+- A `CNAME` (including `ALIASES`) sharing its name with other records fails at `plan`, except at the zone apex
+
+### Changed
+
+- Duplicate record errors show where each duplicate is defined in `records`
+
 ## [2.1.0] - 2026-09-26
 
 ### Added
@@ -61,7 +71,8 @@ All notable changes to this project are documented in this file. The format is b
 - Inline aliases pointed to a relative name instead of the full hostname
 - Zone apex (`@`) handling for aliases and nested names
 
-[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v1.1.0...v2.0.0
 [1.1.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v1.0.0...v1.1.0
