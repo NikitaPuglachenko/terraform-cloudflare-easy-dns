@@ -26,7 +26,7 @@ Both wrappers share the same inputs, outputs and record keys, so switching betwe
 
 | Module | Terraform | Cloudflare provider |
 |--------|-----------|---------------------|
-| `modules/dns/v4` | `>= 1.5.0` | `~> 4.30` |
+| `modules/dns/v4` | `>= 1.8.0` | `~> 4.30` |
 | `modules/dns/v5` | `>= 1.8.0` | `~> 5.26` |
 
 If `zone_name` is not set, the module looks up the zone by `zone_id`, so the API token needs the `Zone:Read` permission.
@@ -139,7 +139,7 @@ Keys in the state look like `A_app_0`, `_acme-challenge.TXT_app_0`, `ALIASES_app
 
 The v5 wrapper contains a `moved` block from `cloudflare_record` to `cloudflare_dns_record`, so the state is migrated without recreating records:
 
-1. Upgrade the Cloudflare provider to `~> 5.26` and Terraform to `>= 1.8.0`.
+1. Upgrade the Cloudflare provider to `~> 5.26`.
 2. Change the module `source` from `//modules/dns/v4` to `//modules/dns/v5`, keeping the module name the same.
 3. Run `terraform init -upgrade` and `terraform plan`. The plan should only show moved resources, without destroying or creating records. Review it carefully before applying.
 
@@ -152,6 +152,8 @@ cd modules/dns/v5
 terraform init
 terraform test
 ```
+
+CI runs `terraform fmt`, `validate` and `test` for both wrappers (on Terraform 1.8 and the latest version), [TFLint](https://github.com/terraform-linters/tflint) and [Gitleaks](https://github.com/gitleaks/gitleaks) on every pull request.
 
 ## License
 MIT
