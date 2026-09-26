@@ -5,8 +5,9 @@ locals {
 module "records" {
   source = "../records"
 
-  root_domain = local.root_domain
-  records     = var.records
+  root_domain      = local.root_domain
+  records          = var.records
+  existing_records = local.existing_records
 }
 
 data "cloudflare_zone" "this" {

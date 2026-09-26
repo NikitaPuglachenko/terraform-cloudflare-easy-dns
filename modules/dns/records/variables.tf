@@ -174,3 +174,15 @@ variable "records" {
     error_message = "Record key must be a non-empty string without whitespace."
   }
 }
+
+variable "existing_records" {
+  description = "Records that already exist in the zone, used to find import IDs. Names are fully qualified, as returned by the Cloudflare API"
+  type = list(object({
+    id      = string
+    name    = string
+    type    = string
+    content = optional(string)
+    data    = optional(map(string))
+  }))
+  default = []
+}

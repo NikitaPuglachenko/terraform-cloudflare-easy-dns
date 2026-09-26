@@ -34,3 +34,9 @@ variable "records" {
     )
   )
 }
+
+variable "import_existing" {
+  description = "Look up records that already exist in the zone and expose their IDs in the import_ids output, to adopt them with import blocks. Requires the DNS Read permission"
+  type        = bool
+  default     = false
+}

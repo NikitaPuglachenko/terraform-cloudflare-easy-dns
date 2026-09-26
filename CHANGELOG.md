@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- Import of records that already exist in the zone (provider v5): `import_existing` input and `import_ids` output for an `import` block with `for_each`
+
 ## [2.2.0] - 2026-09-26
 
 ### Added

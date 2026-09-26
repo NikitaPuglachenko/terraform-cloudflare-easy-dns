@@ -17,3 +17,8 @@ output "state_migration" {
   description = "Map of record keys used by module versions 1.x to the current keys, for state migration"
   value       = local.state_migration
 }
+
+output "import_record_ids" {
+  description = "Cloudflare record IDs of existing_records matching the configured records, keyed by record key. Records with no or several matches are left out"
+  value       = local.import_record_ids
+}
