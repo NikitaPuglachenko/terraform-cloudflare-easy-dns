@@ -348,6 +348,8 @@ When the zone already has records, the first `apply` would fail with "record alr
 3. Run `terraform plan`. Existing records are shown as imported, and only records missing in the zone are created. Check that no record you expect to be imported is shown as created.
 4. Run `terraform apply`, then remove the `import` block and `import_existing`, so the zone is not read on every plan.
 
+For structured records (`SRV`, `HTTPS`, `TLSA`, ...), provider v5 plans a one-time in-place update right after the import, without visible changes; after the `apply`, the plan is empty.
+
 Matching ignores case, a trailing dot and the quoting of TXT values. A record is imported only when exactly one existing record matches it: when the zone has several identical records, the record is not imported and `plan` shows it as created, so the duplicates can be cleaned up first.
 
 ## Upgrading from v1
@@ -390,7 +392,8 @@ The v5 wrapper contains a `moved` block from `cloudflare_record` to `cloudflare_
 
 1. Upgrade the Cloudflare provider to `~> 5.26`.
 2. Change the module `source` from `//modules/dns/v4` to `//modules/dns/v5`, keeping the module name the same. To go straight to the root module, also add the `moved` block from [Switching from the v5 Submodule to the Root Module](#switching-from-the-v5-submodule-to-the-root-module), with `cloudflare_record` in `from`.
-3. Run `terraform init -upgrade` and `terraform plan`. The plan should only show moved resources, without destroying or creating records. Review it carefully before applying.
+3. Run `terraform init -upgrade` and `terraform plan`. The plan should only show moved resources, without destroying or creating records; provider v5 also plans a one-time in-place update of the moved records (e.g. CAA `flags` become numbers). Review it carefully before applying.
+4. Run `terraform apply`. Provider v5 (checked with 5.26) may report `Provider produced inconsistent result after apply` with `.modified_on` for some records: the timestamp in the migrated state has a different precision. The records are updated anyway; run `terraform plan` again, it should show no changes.
 
 ## Testing
 

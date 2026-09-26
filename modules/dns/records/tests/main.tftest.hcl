@@ -189,6 +189,7 @@ run "data_types" {
       }
       "@" = {
         HTTPS      = [{ key = "h3", data = { priority = 1, target = ".", value = "alpn=\"h3,h2\"" } }]
+        SVCB       = [{ data = { priority = 1, target = "svc.example.com", value = "port=\"8443\"" } }]
         OPENPGPKEY = [{ content = "mQINBGE" }]
       }
       "_ftp._tcp" = {
@@ -211,6 +212,11 @@ run "data_types" {
   assert {
     condition     = output.flat_records["@ HTTPS h3"].content == null && output.flat_records["@ HTTPS h3"].data.target == "." && output.flat_records["@ HTTPS h3"].priority == null
     error_message = "HTTPS"
+  }
+
+  assert {
+    condition     = one([for k, r in output.flat_records : r.data.target if r.type == "SVCB"]) == "svc.example.com."
+    error_message = "SVCB targets get a trailing dot, as Cloudflare returns them"
   }
 
   assert {

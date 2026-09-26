@@ -68,6 +68,11 @@ locals {
       priority = contains(["MX", "URI"], r.type) ? r.rec.priority : r.type == "SRV" ? tonumber(r.rec.data.priority) : null
       data = (
         r.type == "CAA" ? tomap({ flags = tostring(r.rec.flags), tag = r.rec.tag, value = r.content }) :
+        # Cloudflare returns SVCB and HTTPS targets as fully qualified names, so they
+        # get the trailing dot here to avoid a diff on every plan
+        contains(["HTTPS", "SVCB"], r.type) ? merge(r.rec.data, {
+          target = endswith(r.rec.data.target, ".") ? r.rec.data.target : "${r.rec.data.target}."
+        }) :
         contains(local.data_types, r.type) ? r.rec.data :
         null
       )

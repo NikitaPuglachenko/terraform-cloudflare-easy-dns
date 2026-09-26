@@ -71,10 +71,18 @@ tf v5 apply -auto-approve -no-color tfplan >/dev/null
 assert_no_changes v5 -var a_value=192.0.2.20 -var txt_value=rotation=2
 pass "value change: record without key replaced, record with key updated in place"
 
-# Scenario 2: the same records are adopted into an empty state
+# Scenario 2: the same records are adopted into an empty state. Provider v5 plans a
+# one-time update without visible changes for imported structured records (SRV, ...)
 summary=$(plan_summary import -var a_value=192.0.2.20 -var txt_value=rotation=2)
-[ "$summary" = "create=0 delete=0 update=0 import=${count} move=0" ] || fail "import: ${summary}, expected import=${count}"
-pass "all ${count} records matched for import"
+case "$summary" in
+    "create=0 delete=0 update="*" import=${count} move=0") ;;
+    *) fail "import: ${summary}, expected import=${count} and nothing created or deleted" ;;
+esac
+tf import apply -auto-approve -no-color tfplan >/dev/null
+assert_no_changes import -var a_value=192.0.2.20 -var txt_value=rotation=2
+# The records stay managed by the state of scenario 1, which deletes them
+rm -f "${E2E_DIR}/import/terraform.tfstate"*
+pass "all ${count} records imported, no drift afterwards (${summary})"
 
 # Scenario 3: records created with provider v4 are moved to v5 without recreation
 tf v4 apply -auto-approve -no-color >"${E2E_DIR}/apply.log" || fail "v4 apply: $(tail -40 "${E2E_DIR}/apply.log")"
@@ -87,7 +95,19 @@ case "$summary" in
     "create=0 delete=0 "*) ;;
     *) fail "v4 to v5 migration: ${summary}" ;;
 esac
-tf v4to5 apply -auto-approve -no-color tfplan >/dev/null
+# Provider v5 may report an inconsistent modified_on (different precision than in the
+# migrated state) for some records on this first apply; the records are updated and
+# the next plan is empty, so only this error is tolerated
+only_modified_on_inconsistency() {
+    local attributes
+    grep -q "Provider produced inconsistent result after apply" "$1" || return 1
+    attributes=$(grep -oE "unexpected new value: \.[a-z_]+" "$1" | sed 's/.*\.//' | sort -u)
+    [ "$attributes" = "modified_on" ]
+}
+if ! tf v4to5 apply -auto-approve -no-color tfplan >"${E2E_DIR}/apply.log" 2>&1; then
+    only_modified_on_inconsistency "${E2E_DIR}/apply.log" || fail "v4 to v5 apply: $(tail -40 "${E2E_DIR}/apply.log")"
+    echo "note: provider reported the known modified_on inconsistency after the migration"
+fi
 assert_no_changes v4to5
 pass "v4 to v5 migration without recreating records (${summary})"
 

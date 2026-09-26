@@ -18,6 +18,8 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Fixed
 
+- Import failed with a Terraform crash when the zone had CAA or DNSKEY records together with other types: provider v5 returns `data.flags` with different types in one list, so existing records are now looked up per record type
+- SVCB and HTTPS records showed a change on every plan: Cloudflare returns their `target` with a trailing dot, which is now added
 - The v4 wrapper required provider `~> 4.30`, but `cloudflare_record` has the `content` attribute only since 4.39; the minimum is now `~> 4.41`, which also fixes the handling of `content` and `value` in the state
 
 ## [2.4.0] - 2026-09-26
