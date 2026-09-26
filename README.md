@@ -54,7 +54,7 @@ Everything else (all record types, defaults, import of existing records, validat
 ## Contents
 
 - [Features](#features), [Structure](#structure), [Requirements](#requirements)
-- [Usage](#usage) and the [full example](#full-example)
+- [Usage](#usage): [HCL or YAML](#hcl-or-yaml) and the [full example](#full-example)
 - [Record Model](#record-model): [record types](#record-types), [aliases](#the-aliases-logic), [record keys](#record-keys)
 - [Validation](#validation), [Inputs](#inputs), [Outputs](#outputs)
 - [Records in YAML](#records-in-yaml) with editor support, [Recipes](#recipes)
@@ -117,6 +117,15 @@ The module is published on the [Terraform Registry](https://registry.terraform.i
 | v4 | `NikitaPuglachenko/easy-dns/cloudflare//modules/dns/v4` |
 
 Without the Registry (e.g. from a Git mirror), use a Git source with a tag: `git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git?ref=v2.6.0` for v5, or with `//modules/dns/v4` before `?ref=` for v4.
+
+### HCL or YAML
+
+Records can be written directly in `records` or kept in a YAML file passed through `yamldecode`. The module validates both the same way at `plan`; only YAML gets completion and highlighting of mistakes in the editor, through the [JSON Schema](#records-in-yaml):
+
+| | Records in HCL | Records in YAML |
+|:-|:-|:-|
+| Completion and mistakes highlighted in the editor | no (Terraform provides none inside `records`) | yes, with the JSON Schema |
+| Validation at `plan` (typos, types, IP addresses, `data` fields, ...) | yes | yes |
 
 ### Full Example
 
@@ -204,7 +213,7 @@ Each key inside a base name block is a record type (`A`, `AAAA`, `CNAME`, `TXT`,
 
 ### Record Types
 
-Most records are defined by `content`. Structured records are defined by a `data` map instead, with the same fields as in the Cloudflare API:
+Most records are defined by `content`. Structured records are defined by a `data` map instead, with the same fields as in the Cloudflare API. The module only checks which fields are present; what the fields and their values mean is described in the Cloudflare [DNS record types](https://developers.cloudflare.com/dns/manage-dns-records/reference/dns-record-types/) and in the `data` attribute of [`cloudflare_dns_record`](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/dns_record), as are `settings`:
 
 | Type | Defined by | `data` fields (optional in italics) |
 |------|-----------|--------------------------------------|
@@ -348,7 +357,7 @@ module "dns" {
 }
 ```
 
-Cloudflare supports record tags only on some plans; on other plans, leave `default_tags` and `tags` empty.
+Cloudflare supports record tags only on some plans and limits the length of comments by plan, see [DNS record comments and tags](https://developers.cloudflare.com/dns/manage-dns-records/reference/record-attributes/); on other plans, leave `default_tags` and `tags` empty.
 
 ## Outputs
 
@@ -386,7 +395,7 @@ Alternatively, a comment at the top of a file links the schema regardless of its
 
 See [`examples/yaml`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/examples/yaml).
 
-Use the schema of the module version you use. For records written in HCL, Terraform provides no such completion, and misspelled attributes are reported at `plan`.
+Use the schema of the module version you use. For records written in HCL, there is no such completion (see [HCL or YAML](#hcl-or-yaml)); mistakes are reported at `plan`.
 
 `yamldecode` follows YAML 1.1, where unquoted `yes`, `no`, `on`, `off`, `y` and `n` (in any case) are booleans; quote such values, e.g. `content: "on"`. The module accepts the unquoted `N` of a LOC `lat_direction`.
 
