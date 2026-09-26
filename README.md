@@ -1,10 +1,6 @@
 # Cloudflare DNS Records Factory (Terraform Module)
 
-[![Terraform Registry](https://img.shields.io/badge/terraform-registry-7B42BC?logo=terraform)](https://registry.terraform.io/modules/NikitaPuglachenko/easy-dns/cloudflare/latest)
-[![Release](https://img.shields.io/github/v/release/NikitaPuglachenko/terraform-cloudflare-easy-dns)](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/releases/latest)
-[![CI](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/actions/workflows/ci.yml/badge.svg)](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/actions/workflows/ci.yml)
-[![End-to-end](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/actions/workflows/e2e.yml/badge.svg)](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/actions/workflows/e2e.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/blob/main/LICENSE)
+[![Terraform Registry](https://img.shields.io/badge/terraform-registry-7B42BC?logo=terraform)](https://registry.terraform.io/modules/NikitaPuglachenko/easy-dns/cloudflare/latest) [![Release](https://img.shields.io/github/v/release/NikitaPuglachenko/terraform-cloudflare-easy-dns)](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/releases/latest) [![CI](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/actions/workflows/ci.yml/badge.svg)](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/actions/workflows/ci.yml) [![End-to-end](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/actions/workflows/e2e.yml/badge.svg)](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/actions/workflows/e2e.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/blob/main/LICENSE)
 
 A flexible Terraform module to manage Cloudflare DNS records using a structured object-based approach. Instead of defining multiple record resources, you can define your entire DNS zone (or sub-sections of it) in a single hierarchical map.
 
@@ -28,19 +24,26 @@ module "dns" {
 
   records = {
     "app" = {
-      A                     = [{ content = "192.0.2.10" }]              # app.example.com
-      "_acme-challenge.TXT" = [{ key = "acme", content = "token" }]     # _acme-challenge.app.example.com
-      ALIASES               = [{ content = "www" }]                     # www.example.com -> CNAME -> app.example.com
+      # app.example.com
+      A = [{ content = "192.0.2.10" }]
+
+      # _acme-challenge.app.example.com
+      "_acme-challenge.TXT" = [{ key = "acme", content = "token" }]
+
+      # www.example.com -> CNAME -> app.example.com
+      ALIASES = [{ content = "www" }]
     }
   }
 }
 ```
 
-| Record | Address in the state |
-|--------|----------------------|
-| `app.example.com A 192.0.2.10` | `module.dns.module.v5.cloudflare_dns_record.record["app A 192.0.2.10"]` |
-| `_acme-challenge.app.example.com TXT "token"` | `module.dns.module.v5.cloudflare_dns_record.record["_acme-challenge.app TXT acme"]` |
-| `www.example.com CNAME app.example.com` | `module.dns.module.v5.cloudflare_dns_record.record["www CNAME"]` |
+Each record is an instance of `module.dns.module.v5.cloudflare_dns_record.record`, with these keys:
+
+| Record | Key in the state |
+|:-------|:-----------------|
+| `app.example.com A 192.0.2.10` | `app A 192.0.2.10` |
+| `_acme-challenge.app.example.com TXT "token"` | `_acme-challenge.app TXT acme` |
+| `www.example.com CNAME app.example.com` | `www CNAME` |
 
 - **Names**: `"app"` is the name within the zone (`"@"` for the apex). A prefix before the type (`"_acme-challenge.TXT"`) is added to the name.
 - **Addresses**: a record is addressed by its content, so adding or removing records in a list leaves the others alone. With `key`, the value can change without replacing the record, e.g. for tokens or DKIM keys.
@@ -65,9 +68,9 @@ Everything else (all record types, defaults, import of existing records, validat
 ## Structure
 
 ```
-*.tf           # Root module: the v5 wrapper, used by source = "NikitaPuglachenko/easy-dns/cloudflare"
+*.tf           # Root module (the Registry source): the v5 wrapper
 modules/dns/
-├── records/   # Provider-agnostic core: validates and flattens the input map (used internally)
+├── records/   # Provider-agnostic core: validation and flattening (internal)
 ├── v4/        # Wrapper for Cloudflare provider v4 (cloudflare_record)
 └── v5/        # Wrapper for Cloudflare provider v5 (cloudflare_dns_record)
 examples/
@@ -98,7 +101,7 @@ The module is published on the [Terraform Registry](https://registry.terraform.i
 | v5 | `NikitaPuglachenko/easy-dns/cloudflare` |
 | v4 | `NikitaPuglachenko/easy-dns/cloudflare//modules/dns/v4` |
 
-Without the Registry (e.g. from a Git mirror), use a Git source with a tag: `git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git?ref=v2.5.2` for v5, or with `//modules/dns/v4` before `?ref=` for v4.
+Without the Registry (e.g. from a Git mirror), use a Git source with a tag: `git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git?ref=v2.5.3` for v5, or with `//modules/dns/v4` before `?ref=` for v4.
 
 ### Full Example
 
@@ -122,9 +125,9 @@ module "dns" {
       "_dmarc.TXT" = [
         { content = "v=DMARC1; p=none" },
       ]
-      # An explicit key keeps the record in place when the value changes (e.g. DKIM rotation)
+      # An explicit key keeps the record in place when the value changes
       "google._domainkey.TXT" = [
-        { key = "dkim", content = "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA" },
+        { key = "dkim", content = "v=DKIM1; k=rsa; p=MIIBIjANBg..." },
       ]
       # Result: www.example.com -> CNAME -> example.com
       ALIASES = [
@@ -167,9 +170,9 @@ module "dns" {
     # Structured records use data instead of content
     # Result: SRV record for _sip._tcp.example.com
     "_sip._tcp" = {
-      SRV = [
-        { data = { priority = 10, weight = 5, port = 5060, target = "sip.example.com" } },
-      ]
+      SRV = [{
+        data = { priority = 10, weight = 5, port = 5060, target = "sip.example.com" }
+      }]
     }
   }
 }
@@ -209,10 +212,15 @@ The service and protocol of `SRV`, `URI` and `TLSA` records are part of the name
 
 ```hcl
 "_sip._tcp" = {
-  SRV = [{ data = { priority = 10, weight = 5, port = 5060, target = "sip.example.com" } }]
+  SRV = [{
+    data = { priority = 10, weight = 5, port = 5060, target = "sip.example.com" }
+  }]
 }
 "mail" = {
-  "_25._tcp.TLSA" = [{ key = "mx", data = { usage = 3, selector = 1, matching_type = 1, certificate = "..." } }]
+  "_25._tcp.TLSA" = [{
+    key  = "mx"
+    data = { usage = 3, selector = 1, matching_type = 1, certificate = "..." }
+  }]
 }
 ```
 
@@ -311,8 +319,12 @@ module "dns" {
   default_tags    = ["managed-by:terraform"]
 
   records = {
-    "@"   = { A = [{ content = "192.0.2.10" }] }                                    # proxied
-    "vpn" = { A = [{ content = "192.0.2.20", proxied = false, comment = "WireGuard" }] }
+    # Proxied, with the default comment and tags
+    "@" = { A = [{ content = "192.0.2.10" }] }
+
+    "vpn" = {
+      A = [{ content = "192.0.2.20", proxied = false, comment = "WireGuard" }]
+    }
   }
 }
 ```
@@ -332,10 +344,18 @@ Mail with SPF, DKIM and DMARC; the DKIM record has a `key`, so rotating the key 
 
 ```hcl
 "@" = {
-  MX  = [{ content = "mx1.mail.example.net", priority = 10 }, { content = "mx2.mail.example.net", priority = 20 }]
+  MX = [
+    { content = "mx1.mail.example.net", priority = 10 },
+    { content = "mx2.mail.example.net", priority = 20 },
+  ]
   TXT = [{ content = "v=spf1 include:_spf.mail.example.net -all" }]
-  "google._domainkey.TXT" = [{ key = "dkim", content = "v=DKIM1; k=rsa; p=MIIBIjANBg..." }]
-  "_dmarc.TXT"            = [{ content = "v=DMARC1; p=quarantine; rua=mailto:dmarc@example.com" }]
+
+  "google._domainkey.TXT" = [
+    { key = "dkim", content = "v=DKIM1; k=rsa; p=MIIBIjANBg..." },
+  ]
+  "_dmarc.TXT" = [
+    { content = "v=DMARC1; p=quarantine; rua=mailto:dmarc@example.com" },
+  ]
 }
 ```
 
@@ -368,7 +388,9 @@ A service advertised with SRV:
 
 ```hcl
 "_sip._tcp" = {
-  SRV = [{ data = { priority = 10, weight = 5, port = 5060, target = "sip.example.com" } }]
+  SRV = [{
+    data = { priority = 10, weight = 5, port = 5060, target = "sip.example.com" }
+  }]
 }
 ```
 
@@ -407,8 +429,12 @@ Version 2 changes the record keys in the state (see [Record Keys](#record-keys))
    MODULE=module.dns
    RESOURCE=cloudflare_record
    echo "jsonencode(${MODULE}.state_migration)" | terraform console \
-     | jq -r --arg addr "$MODULE.$RESOURCE.record" \
-       'fromjson | to_entries[] | "moved {\n  from = \($addr)[\(.key | tojson)]\n  to   = \($addr)[\(.value | tojson)]\n}\n"' \
+     | jq -r --arg addr "$MODULE.$RESOURCE.record" '
+         fromjson | to_entries[] |
+         "moved {",
+         "  from = \($addr)[\(.key | tojson)]",
+         "  to   = \($addr)[\(.value | tojson)]",
+         "}", ""' \
      > dns_migration.tf
    ```
 
