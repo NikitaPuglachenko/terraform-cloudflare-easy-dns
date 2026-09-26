@@ -25,12 +25,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # Minimum supported versions (terraform test with mocks requires >= 1.7)
-          - { module: v4, terraform: 1.5.7, test: false }
-          - { module: v5, terraform: 1.8.5, test: true }
-          - { module: v4, terraform: latest, test: true }
-          - { module: v5, terraform: latest, test: true }
+        module: [v4, v5]
+        # Minimum supported and the latest version
+        terraform: [1.8.5, latest]
     defaults:
       run:
         working-directory: modules/dns/${{ matrix.module }}
@@ -42,8 +39,7 @@ jobs:
           terraform_wrapper: false
       - run: terraform init -backend=false
       - run: terraform validate
-      - if: matrix.test
-        run: terraform test
+      - run: terraform test
 
   tflint:
     name: TFLint
