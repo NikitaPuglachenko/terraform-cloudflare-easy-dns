@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.5.2] - 2026-09-26
+
+### Changed
+
+- README: a short introduction to the input model with a minimal example and the resulting state addresses, before the full example
+
 ## [2.5.1] - 2026-09-26
 
 ### Changed
@@ -115,7 +121,8 @@ All notable changes to this project are documented in this file. The format is b
 - Inline aliases pointed to a relative name instead of the full hostname
 - Zone apex (`@`) handling for aliases and nested names
 
-[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.5.1...HEAD
+[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.5.2...HEAD
+[2.5.2]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.5.1...v2.5.2
 [2.5.1]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.5.0...v2.5.1
 [2.5.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.3.0...v2.4.0
