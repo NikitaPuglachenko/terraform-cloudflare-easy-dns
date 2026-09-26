@@ -8,6 +8,46 @@
 
 A flexible Terraform module to manage Cloudflare DNS records using a structured object-based approach. Instead of defining multiple record resources, you can define your entire DNS zone (or sub-sections of it) in a single hierarchical map.
 
+## How It Works in 30 Seconds
+
+The zone is described as one map, grouped by name and then by record type:
+
+```
+records[<name>][<TYPE>] = [ <record>, ... ]
+```
+
+Each record becomes one Cloudflare DNS record, with a stable address in the Terraform state:
+
+```hcl
+module "dns" {
+  source  = "NikitaPuglachenko/easy-dns/cloudflare"
+  version = "~> 2.5"
+
+  zone_id   = var.zone_id
+  zone_name = "example.com"
+
+  records = {
+    "app" = {
+      A                     = [{ content = "192.0.2.10" }]              # app.example.com
+      "_acme-challenge.TXT" = [{ key = "acme", content = "token" }]     # _acme-challenge.app.example.com
+      ALIASES               = [{ content = "www" }]                     # www.example.com -> CNAME -> app.example.com
+    }
+  }
+}
+```
+
+| Record | Address in the state |
+|--------|----------------------|
+| `app.example.com A 192.0.2.10` | `module.dns.module.v5.cloudflare_dns_record.record["app A 192.0.2.10"]` |
+| `_acme-challenge.app.example.com TXT "token"` | `module.dns.module.v5.cloudflare_dns_record.record["_acme-challenge.app TXT acme"]` |
+| `www.example.com CNAME app.example.com` | `module.dns.module.v5.cloudflare_dns_record.record["www CNAME"]` |
+
+- **Names**: `"app"` is the name within the zone (`"@"` for the apex). A prefix before the type (`"_acme-challenge.TXT"`) is added to the name.
+- **Addresses**: a record is addressed by its content, so adding or removing records in a list leaves the others alone. With `key`, the value can change without replacing the record, e.g. for tokens or DKIM keys.
+- **Aliases**: `ALIASES` create CNAMEs that point to the name of the block.
+
+Everything else (all record types, defaults, import of existing records, validation) builds on this; see the [full example](#full-example) and the sections below.
+
 ## Features
 
 - 📂 **Structured Schema**: Group records by their base name (subdomain or `@` for the zone apex).
@@ -58,7 +98,11 @@ The module is published on the [Terraform Registry](https://registry.terraform.i
 | v5 | `NikitaPuglachenko/easy-dns/cloudflare` |
 | v4 | `NikitaPuglachenko/easy-dns/cloudflare//modules/dns/v4` |
 
-Without the Registry (e.g. from a Git mirror), use a Git source with a tag: `git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git?ref=v2.5.0` for v5, or with `//modules/dns/v4` before `?ref=` for v4.
+Without the Registry (e.g. from a Git mirror), use a Git source with a tag: `git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git?ref=v2.5.2` for v5, or with `//modules/dns/v4` before `?ref=` for v4.
+
+### Full Example
+
+A zone with most of the features: the apex, nested names, aliases, CAA and a structured SRV record.
 
 ```hcl
 module "dns" {
