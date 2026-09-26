@@ -1,6 +1,6 @@
 module "dns" {
   # Outside of this repository use:
-  # git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git//modules/dns/v5?ref=v2.1.0
+  # git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git//modules/dns/v5?ref=v2.2.0
   source = "../../modules/dns/v5"
 
   zone_id   = var.zone_id

@@ -15,6 +15,7 @@ locals {
           prefix    = length(split(".", raw_key)) > 1 ? join(".", slice(split(".", raw_key), 0, length(split(".", raw_key)) - 1)) : null
           kind      = element(split(".", raw_key), length(split(".", raw_key)) - 1)
           base_fqdn = base_name == "@" ? var.root_domain : "${base_name}.${var.root_domain}"
+          source    = "records[\"${base_name}\"][\"${raw_key}\"][${idx}]"
         }
       ]
     ]
@@ -24,6 +25,7 @@ locals {
   resolved = [
     for e in local.entries : {
       rec     = e.rec
+      source  = e.source
       name    = e.kind == "ALIASES" ? e.rec.content : e.prefix == null ? e.base_name : e.base_name == "@" ? e.prefix : "${e.prefix}.${e.base_name}"
       type    = e.kind == "ALIASES" ? "CNAME" : e.kind
       content = e.kind == "ALIASES" ? (e.prefix == null ? e.base_fqdn : "${e.prefix}.${e.base_fqdn}") : e.rec.content
@@ -50,6 +52,7 @@ locals {
         "${r.name} ${r.type} ${r.content}"
       )
       old_key  = r.old_key
+      source   = r.source
       name     = r.name
       type     = r.type
       content  = r.type == "CAA" || contains(local.data_types, r.type) ? null : r.content
@@ -64,8 +67,18 @@ locals {
     }
   ]
 
-  grouped    = { for r in local.records : r.key => r... }
-  duplicates = [for key, group in local.grouped : key if length(group) > 1]
+  grouped = { for r in local.records : r.key => r... }
+  duplicates = [
+    for key, group in local.grouped : "\"${key}\" from ${join(" and ", [for r in group : r.source])}"
+    if length(group) > 1
+  ]
+
+  # A CNAME cannot share its name with other records, except at the zone apex (CNAME flattening)
+  by_name = { for r in local.records : lower(r.name) => r... }
+  cname_conflicts = [
+    for name, group in local.by_name : "\"${name}\": ${join(", ", [for r in group : "${r.type} from ${r.source}"])}"
+    if name != "@" && anytrue([for r in group : r.type == "CNAME"]) && anytrue([for r in group : r.type != "CNAME"])
+  ]
 
   flat_records = {
     for key, group in local.grouped : key => {

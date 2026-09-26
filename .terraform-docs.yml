@@ -1,0 +1,14 @@
+formatter: markdown table
+
+output:
+  file: README.md
+  mode: inject
+
+sort:
+  enabled: true
+  by: name
+
+settings:
+  anchor: true
+  # Provider versions from local lock files differ between machines
+  lockfile: false
