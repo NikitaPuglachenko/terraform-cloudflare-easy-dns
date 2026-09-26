@@ -9,6 +9,7 @@ A flexible Terraform module to manage Cloudflare DNS records using a structured 
 - 🛠 **Hybrid Names**: Support for nested subdomains like `_acme-challenge.app`.
 - ☁️ **Cloudflare Optimized**: Automatic `TTL = 1` for proxied records.
 - 🛡 **CAA Support**: Proper handling of CAA tags, flags, and values.
+- 📥 **Import of Existing Records**: Adopt records that already exist in the zone with a single `import` block (provider v5).
 - 🧩 **All Record Types**: `SRV`, `URI`, `HTTPS`, `SVCB`, `TLSA`, `SSHFP`, `DS`, `LOC` and other structured records through a single `data` map.
 - 🔀 **Provider v4 and v5**: The same input schema for both major versions of the Cloudflare provider.
 - ✅ **Input Validation**: Mistakes in record types, TTL, MX or CAA fields fail at `plan`, before reaching the Cloudflare API.
@@ -41,7 +42,7 @@ If `zone_name` is not set, the module looks up the zone by `zone_id`, so the API
 ```hcl
 module "dns" {
   # Use //modules/dns/v4 for Cloudflare provider v4
-  source = "git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git//modules/dns/v5?ref=v2.2.0"
+  source = "git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git//modules/dns/v5?ref=v2.3.0"
 
   zone_id   = var.zone_id
   zone_name = "example.com" # optional, looked up from zone_id when omitted
@@ -201,7 +202,7 @@ The `records` input is validated before any API call:
 
 ## Inputs
 
-Both wrappers take `zone_id`, `zone_name` (optional, looked up from `zone_id` when omitted) and `records`. The full reference of inputs, outputs, requirements and resources is generated from the code with [terraform-docs](https://terraform-docs.io): [`modules/dns/v4`](modules/dns/v4/README.md), [`modules/dns/v5`](modules/dns/v5/README.md).
+Both wrappers take `zone_id`, `zone_name` (optional, looked up from `zone_id` when omitted) and `records`; the v5 wrapper also takes `import_existing`. The full reference of inputs, outputs, requirements and resources is generated from the code with [terraform-docs](https://terraform-docs.io): [`modules/dns/v4`](modules/dns/v4/README.md), [`modules/dns/v5`](modules/dns/v5/README.md).
 
 ### Record Object Schema
 
@@ -221,6 +222,27 @@ Both wrappers take `zone_id`, `zone_name` (optional, looked up from `zone_id` wh
 - `record_names`: names of all managed records
 - `records`: managed records keyed by their [record key](#record-keys), with `id`, `name`, `type` and `content`
 - `state_migration`: map of the record keys used by 1.x to the current ones, see [Upgrading from v1](#upgrading-from-v1)
+- `import_ids` (v5): import IDs of records that already exist in the zone, see [Importing Existing Records](#importing-existing-records)
+
+## Importing Existing Records
+
+When the zone already has records, the first `apply` would fail with "record already exists" for each of them. With provider v5, the module can find the existing records and adopt them into the state instead:
+
+1. Set `import_existing = true`. The module then reads all records of the zone (the API token needs the `DNS Read` permission) and matches them to the configured records by name, type and value.
+2. Add an `import` block next to the module call:
+
+   ```hcl
+   import {
+     for_each = module.dns.import_ids
+     to       = module.dns.cloudflare_dns_record.record[each.key]
+     id       = each.value
+   }
+   ```
+
+3. Run `terraform plan`. Existing records are shown as imported, and only records missing in the zone are created. Check that no record you expect to be imported is shown as created.
+4. Run `terraform apply`, then remove the `import` block and `import_existing`, so the zone is not read on every plan.
+
+Matching ignores case, a trailing dot and the quoting of TXT values. A record is imported only when exactly one existing record matches it: when the zone has several identical records, the record is not imported and `plan` shows it as created, so the duplicates can be cleaned up first.
 
 ## Upgrading from v1
 

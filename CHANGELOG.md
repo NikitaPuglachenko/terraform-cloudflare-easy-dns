@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-09-26
+
+### Added
+
+- Import of records that already exist in the zone (provider v5): `import_existing` input and `import_ids` output for an `import` block with `for_each`
+
 ## [2.2.0] - 2026-09-26
 
 ### Added
@@ -73,7 +79,8 @@ All notable changes to this project are documented in this file. The format is b
 - Inline aliases pointed to a relative name instead of the full hostname
 - Zone apex (`@`) handling for aliases and nested names
 
-[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.3.0...HEAD
+[2.3.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v1.1.0...v2.0.0
