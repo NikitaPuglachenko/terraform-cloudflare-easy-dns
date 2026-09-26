@@ -1,0 +1,37 @@
+# All record types; used by the schema tests and by the root module tests
+records:
+  "@":
+    A: [{ content: 192.0.2.10, proxied: true, comment: Web, tags: [role:web] }]
+    AAAA: [{ content: "2001:db8::10", settings: { ipv6_only: true } }]
+    MX: [{ content: mx.example.com, priority: 10 }]
+    TXT: [{ content: "v=spf1 -all" }]
+    CAA: [{ content: letsencrypt.org, tag: issue }, { content: letsencrypt.org, tag: iodef, flags: 128 }]
+    NS: [{ content: ns1.example.net }]
+    OPENPGPKEY: [{ content: mQINBGE }]
+    _dmarc.TXT: [{ content: "v=DMARC1; p=none", ttl: 300 }]
+    google._domainkey.TXT: [{ key: dkim, content: "v=DKIM1; p=abc" }]
+    ALIASES: [{ content: www, proxied: true }]
+    cdn.ALIASES: [{ content: static }]
+  app:
+    CNAME: [{ content: target.example.net, ttl: 1 }]
+  "*.dev":
+    A: [{ content: 192.0.2.20 }]
+  _sip._tcp:
+    SRV: [{ data: { priority: 10, weight: 5, port: 5060, target: sip.example.com } }]
+  _ftp._tcp:
+    URI: [{ priority: 10, data: { weight: 1, target: "ftp://ftp.example.com/" } }]
+  svc:
+    HTTPS: [{ key: h3, data: { priority: 1, target: ".", value: 'alpn="h3,h2"' } }]
+    SVCB: [{ data: { priority: 1, target: svc.example.com } }]
+  mail:
+    _25._tcp.TLSA: [{ data: { usage: 3, selector: 1, matching_type: 1, certificate: abcdef } }]
+  ssh:
+    SSHFP: [{ data: { algorithm: 4, type: 2, fingerprint: abcdef } }]
+  sec:
+    DS: [{ data: { key_tag: 2371, algorithm: 13, digest_type: 2, digest: abcdef } }]
+    DNSKEY: [{ data: { flags: 257, protocol: 3, algorithm: 13, public_key: abc } }]
+    CERT: [{ data: { type: 1, key_tag: 1, algorithm: 8, certificate: abc } }]
+  sip:
+    NAPTR: [{ data: { order: 100, preference: 10, flags: U, service: E2U+sip, regex: "!^.*$!sip:info@example.com!", replacement: "." } }]
+  office:
+    LOC: [{ data: { lat_degrees: 59, lat_minutes: 26, lat_seconds: 14.5, lat_direction: N, long_degrees: 24, long_minutes: 44, long_seconds: 43, long_direction: E } }]

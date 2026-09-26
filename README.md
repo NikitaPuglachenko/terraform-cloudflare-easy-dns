@@ -63,6 +63,7 @@ Everything else (all record types, defaults, import of existing records, validat
 - 🔀 **Provider v4 and v5**: The same input schema for both major versions of the Cloudflare provider.
 - ✅ **Input Validation**: Mistakes in record types, names, IP addresses, TTL, MX or CAA fields fail at `plan`, before reaching the Cloudflare API.
 - 🏷 **Defaults, Comments and Tags**: Set the TTL, proxying, comment and tags once for all records, and override them per record.
+- ✍️ **Editor Support for YAML**: A JSON Schema for records kept in YAML, for completion and highlighting of mistakes before `plan`.
 - 🧪 **Tested End to End**: Every record type, updates, import and the v4 to v5 migration are tested against a real Cloudflare zone.
 
 ## Structure
@@ -342,6 +343,30 @@ Cloudflare supports record tags only on some plans; on other plans, leave `defau
 - `state_migration`: map of the record keys used by 1.x to the current ones, see [Upgrading from v1](#upgrading-from-v1)
 - `import_ids` (v5): import IDs of records that already exist in the zone, see [Importing Existing Records](#importing-existing-records)
 
+## Records in YAML
+
+Records can be kept in a YAML file and passed with `yamldecode`:
+
+```hcl
+records = yamldecode(file("${path.module}/dns.yaml")).records
+```
+
+`schema/records.schema.json` is a JSON Schema for such a file (a document with a `records` key). Editors use it for completion of record types, attributes and `data` fields, and highlight mistakes such as `proxid`, `ttl: 5m` or a CAA `tag` that does not exist before `terraform plan`:
+
+The schema URL of this version is [`https://raw.githubusercontent.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/v2.6.0/schema/records.schema.json`](https://raw.githubusercontent.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/v2.6.0/schema/records.schema.json).
+
+- **VS Code** (with the YAML extension): add a comment with the schema URL at the top of the file
+
+  ```yaml
+  # yaml-language-server: $schema=<schema URL>
+  ```
+
+- **JetBrains IDEs**: Settings, Languages & Frameworks, Schemas and DTDs, JSON Schema Mappings: add the schema URL and map it to the YAML files with records.
+
+Use the schema of the module version you use. For records written in HCL, Terraform provides no such completion, and misspelled attributes are reported at `plan`.
+
+`yamldecode` follows YAML 1.1, where unquoted `yes`, `no`, `on`, `off`, `y` and `n` (in any case) are booleans; quote such values, e.g. `content: "on"`. The module accepts the unquoted `N` of a LOC `lat_direction`.
+
 ## Recipes
 
 Mail with SPF, DKIM and DMARC; the DKIM record has a `key`, so rotating the key updates the record in place:
@@ -479,13 +504,15 @@ terraform init
 terraform test
 ```
 
-The module READMEs are generated with [terraform-docs](https://terraform-docs.io). After changing variables, outputs or requirements, regenerate them:
+The module READMEs are generated with [terraform-docs](https://terraform-docs.io), and the JSON Schema with a script that reads the record types and `data` fields from the records module. After changing variables, outputs, requirements or record types, regenerate them:
 
 ```sh
 ./scripts/generate-docs.sh
+python3 scripts/generate-schema.py
+python3 scripts/test-schema.py   # requires jsonschema and pyyaml
 ```
 
-CI runs `terraform fmt`, `validate` and `test` for the root module, the core module, both wrappers and the examples (on Terraform 1.8 and the latest version, and on the minimum supported provider versions), checks that the module READMEs are up to date and that the root module and the wrappers have the same interface, [TFLint](https://github.com/terraform-linters/tflint) and [Gitleaks](https://github.com/gitleaks/gitleaks) on every pull request.
+CI runs `terraform fmt`, `validate` and `test` for the root module, the core module, both wrappers and the examples (on Terraform 1.8 and the latest version, and on the minimum supported provider versions), checks that the module READMEs and the JSON Schema are up to date, tests the schema, checks that the root module and the wrappers have the same interface, [TFLint](https://github.com/terraform-linters/tflint) and [Gitleaks](https://github.com/gitleaks/gitleaks) on every pull request.
 
 ### End-to-End Tests
 

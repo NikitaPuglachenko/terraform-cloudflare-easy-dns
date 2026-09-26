@@ -8,7 +8,12 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Added
 
+- JSON Schema `schema/records.schema.json` for records kept in YAML, for completion and validation in editors; it is generated from the records module and tested in CI, also against the module through `yamldecode`
 - Unknown record attributes fail at `plan` with the record and the attribute, e.g. `records["app"]["A"][0]: unknown attribute "proxid"`, also inside `settings`; before, Terraform silently dropped them, so a misspelled optional attribute was ignored
+
+### Fixed
+
+- A LOC record from YAML with an unquoted `lat_direction: N` failed, since `yamldecode` reads it as `false`; it is now read as `N`
 
 ### Changed
 

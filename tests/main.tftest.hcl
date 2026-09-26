@@ -60,3 +60,22 @@ run "record_is_not_an_object" {
 
   expect_failures = [var.records]
 }
+
+# The same document as the schema tests, through yamldecode like a dns.yaml
+run "yaml_all_types" {
+  command = plan
+
+  variables {
+    records = yamldecode(file("tests/fixtures/all-types.yaml")).records
+  }
+
+  assert {
+    condition     = length(output.record_names) == 25
+    error_message = "All records of the fixture must be planned"
+  }
+
+  assert {
+    condition     = one([for k, r in module.v5.records : k if startswith(k, "office LOC")]) != null
+    error_message = "The LOC record with an unquoted N must be accepted"
+  }
+}

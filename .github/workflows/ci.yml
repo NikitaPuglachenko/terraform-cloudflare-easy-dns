@@ -116,6 +116,17 @@ jobs:
           done
       - run: shellcheck tests/e2e/*.sh scripts/*.sh
 
+  schema:
+    name: JSON Schema
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: pip install --quiet jsonschema pyyaml
+      - run: python3 scripts/generate-schema.py
+      - name: Check that the schema is up to date
+        run: git diff --exit-code schema/ || { echo "The schema is outdated, run scripts/generate-schema.py"; exit 1; }
+      - run: python3 scripts/test-schema.py
+
   tflint:
     name: TFLint
     runs-on: ubuntu-latest
