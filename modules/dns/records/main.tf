@@ -1,75 +1,79 @@
 locals {
-  flat_records_regular = merge([
-    for base_name, type_map in var.records : merge([
-      for raw_key, recs in type_map : (
-        raw_key == "ALIASES" || endswith(raw_key, ".ALIASES")
-        ) ? {} : {
-        for idx, rec in recs :
-        (
-          raw_key == "CAA"
-          ? "${raw_key}_${base_name}_${lookup(rec, "tag", "na")}_${lookup(rec, "content", "na")}_${lookup(rec, "flags", 0)}"
-          : "${raw_key}_${base_name}_${idx}"
-          ) => merge(
-          rec,
-          length(split(".", raw_key)) > 1 ? {
-            name = (
-              base_name == "@"
-              ? join(".", slice(split(".", raw_key), 0, length(split(".", raw_key)) - 1))
-              : format(
-                "%s.%s",
-                join(".", slice(split(".", raw_key), 0, length(split(".", raw_key)) - 1)),
-                base_name
-              )
-            )
-            type = element(split(".", raw_key), length(split(".", raw_key)) - 1)
-            } : {
-            name = base_name
-            type = raw_key
-          }
-        )
-      }
-    ]...)
-  ]...)
-
-  flat_records_aliases_legacy = merge([
-    for name, type_map in var.records : merge([
-      for type, recs in type_map : type != "ALIASES" ? {} : {
-        for idx, rec in recs :
-        "ALIASES_${name}_${rec.content}" => {
-          name     = rec.content
-          type     = "CNAME"
-          content  = name == "@" ? var.root_domain : "${name}.${var.root_domain}"
-          ttl      = rec.ttl
-          proxied  = rec.proxied
-          priority = null
+  # One entry per record in the input, with the parts of its key split out:
+  # "_acme-challenge.TXT" -> prefix "_acme-challenge", kind "TXT"
+  entries = flatten([
+    for base_name, type_map in var.records : [
+      for raw_key, recs in type_map : [
+        for idx, rec in recs : {
+          rec       = rec
+          base_name = base_name
+          raw_key   = raw_key
+          idx       = idx
+          prefix    = length(split(".", raw_key)) > 1 ? join(".", slice(split(".", raw_key), 0, length(split(".", raw_key)) - 1)) : null
+          kind      = element(split(".", raw_key), length(split(".", raw_key)) - 1)
+          base_fqdn = base_name == "@" ? var.root_domain : "${base_name}.${var.root_domain}"
         }
-      }
-    ]...)
-  ]...)
+      ]
+    ]
+  ])
 
-  flat_records_aliases_inline = merge([
-    for base_name, type_map in var.records : merge([
-      for raw_key, recs in type_map : !endswith(raw_key, ".ALIASES") ? {} : {
-        for idx, rec in recs :
-        "ALIASES_INLINE_${base_name}_${raw_key}_${idx}_${rec.content}" => {
-          name = rec.content
-          type = "CNAME"
-          content = format(
-            "%s.%s",
-            join(".", slice(split(".", raw_key), 0, length(split(".", raw_key)) - 1)),
-            base_name == "@" ? var.root_domain : "${base_name}.${var.root_domain}"
-          )
-          ttl      = rec.ttl
-          proxied  = rec.proxied
-          priority = null
-        }
-      }
-    ]...)
-  ]...)
+  # Resolved records: ALIASES become CNAMEs, prefixes are prepended to the base name
+  resolved = [
+    for e in local.entries : {
+      rec     = e.rec
+      name    = e.kind == "ALIASES" ? e.rec.content : e.prefix == null ? e.base_name : e.base_name == "@" ? e.prefix : "${e.prefix}.${e.base_name}"
+      type    = e.kind == "ALIASES" ? "CNAME" : e.kind
+      content = e.kind == "ALIASES" ? (e.prefix == null ? e.base_fqdn : "${e.prefix}.${e.base_fqdn}") : e.rec.content
 
-  flat_records_all = merge(
-    local.flat_records_regular,
-    local.flat_records_aliases_legacy,
-    local.flat_records_aliases_inline,
-  )
+      # Key used by module versions 1.x, for state migration
+      old_key = (
+        e.kind == "ALIASES" && e.prefix == null ? "ALIASES_${e.base_name}_${e.rec.content}" :
+        e.kind == "ALIASES" ? "ALIASES_INLINE_${e.base_name}_${e.raw_key}_${e.idx}_${e.rec.content}" :
+        e.raw_key == "CAA" ? "CAA_${e.base_name}_${e.rec.tag}_${e.rec.content}_${e.rec.flags}" :
+        "${e.raw_key}_${e.base_name}_${e.idx}"
+      )
+    }
+  ]
+
+  # Keys follow the zone file format: "<name> <TYPE> <value>"
+  records = [
+    for r in local.resolved : {
+      key = (
+        r.rec.key != null ? "${r.name} ${r.type} ${r.rec.key}" :
+        r.type == "CNAME" ? "${r.name} CNAME" :
+        r.type == "CAA" ? "${r.name} CAA ${r.rec.tag} ${r.content}" :
+        r.type == "TXT" ? "${r.name} TXT ${substr(sha1(r.content), 0, 12)}" :
+        "${r.name} ${r.type} ${r.content}"
+      )
+      old_key  = r.old_key
+      name     = r.name
+      type     = r.type
+      content  = r.content
+      ttl      = r.rec.ttl
+      proxied  = r.rec.proxied
+      priority = r.rec.priority
+      tag      = r.rec.tag
+      flags    = r.rec.flags
+    }
+  ]
+
+  grouped    = { for r in local.records : r.key => r... }
+  duplicates = [for key, group in local.grouped : key if length(group) > 1]
+
+  flat_records = {
+    for key, group in local.grouped : key => {
+      name     = group[0].name
+      type     = group[0].type
+      content  = group[0].content
+      ttl      = group[0].ttl
+      proxied  = group[0].proxied
+      priority = group[0].priority
+      tag      = group[0].tag
+      flags    = group[0].flags
+    }
+  }
+
+  state_migration = {
+    for r in local.records : r.old_key => r.key if r.old_key != r.key
+  }
 }

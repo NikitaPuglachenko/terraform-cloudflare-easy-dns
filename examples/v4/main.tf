@@ -1,6 +1,6 @@
 module "dns" {
   # Outside of this repository use:
-  # git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git//modules/dns/v4?ref=v1.1.0
+  # git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git//modules/dns/v4?ref=v2.0.0
   source = "../../modules/dns/v4"
 
   zone_id   = var.zone_id
@@ -25,6 +25,10 @@ module "dns" {
       # Result: TXT record for _dmarc.example.com
       "_dmarc.TXT" = [
         { content = "v=DMARC1; p=none" },
+      ]
+      # An explicit key keeps the record in place when the value changes (e.g. DKIM rotation)
+      "google._domainkey.TXT" = [
+        { key = "dkim", content = "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA" },
       ]
       # Result: www.example.com -> CNAME -> example.com
       ALIASES = [
