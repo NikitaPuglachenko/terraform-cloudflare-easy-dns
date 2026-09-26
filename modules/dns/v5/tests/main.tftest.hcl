@@ -116,3 +116,33 @@ run "settings" {
     error_message = "Settings are passed to the resource"
   }
 }
+
+run "unknown_attribute" {
+  command = plan
+
+  variables {
+    records = { "app" = { A = [{ content = "192.0.2.1", proxid = true }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "unknown_settings_attribute" {
+  command = plan
+
+  variables {
+    records = { "app" = { AAAA = [{ content = "2001:db8::1", settings = { ipv6_onyl = true } }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "record_is_not_an_object" {
+  command = plan
+
+  variables {
+    records = { "app" = { A = ["192.0.2.1"] } }
+  }
+
+  expect_failures = [var.records]
+}

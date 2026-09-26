@@ -1,0 +1,1875 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/main/schema/records.schema.json",
+  "title": "easy-dns records",
+  "description": "DNS records of the easy-dns Terraform module: a document with a records key, as passed through yamldecode",
+  "type": "object",
+  "properties": {
+    "records": {
+      "$ref": "#/definitions/records"
+    }
+  },
+  "definitions": {
+    "records": {
+      "description": "records[NAME][TYPE] = [RECORD, ...]; NAME is a name within the zone (@ for the apex)",
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^(@|(\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*)$"
+      },
+      "additionalProperties": {
+        "description": "Record types, optionally with a prefix, e.g. _acme-challenge.TXT",
+        "type": "object",
+        "patternProperties": {
+          "^((\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.)?A$": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/A"
+            }
+          },
+          "^((\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.)?AAAA$": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/AAAA"
+            }
+          },
+          "^((\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.)?ALIASES$": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/ALIASES"
+            }
+          },
+          "^((\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.)?CAA$": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/CAA"
+            }
+          },
+          "^((\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.)?CERT$": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/CERT"
+            }
+          },
+          "^((\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.)?CNAME$": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/CNAME"
+            }
+          },
+          "^((\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.)?DNSKEY$": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/DNSKEY"
+            }
+          },
+          "^((\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.)?DS$": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/DS"
+            }
+          },
+          "^((\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.)?HTTPS$": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/HTTPS"
+            }
+          },
+          "^((\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.)?LOC$": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/LOC"
+            }
+          },
+          "^((\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.)?MX$": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/MX"
+            }
+          },
+          "^((\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.)?NAPTR$": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/NAPTR"
+            }
+          },
+          "^((\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.)?NS$": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/NS"
+            }
+          },
+          "^((\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.)?OPENPGPKEY$": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/OPENPGPKEY"
+            }
+          },
+          "^((\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.)?PTR$": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/PTR"
+            }
+          },
+          "^((\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.)?SMIMEA$": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/SMIMEA"
+            }
+          },
+          "^((\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.)?SRV$": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/SRV"
+            }
+          },
+          "^((\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.)?SSHFP$": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/SSHFP"
+            }
+          },
+          "^((\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.)?SVCB$": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/SVCB"
+            }
+          },
+          "^((\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.)?TLSA$": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/TLSA"
+            }
+          },
+          "^((\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.)?TXT$": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/TXT"
+            }
+          },
+          "^((\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.)?URI$": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/URI"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "A": {
+      "description": "A record",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "content"
+      ],
+      "properties": {
+        "ttl": {
+          "description": "TTL in seconds, 1 for automatic (default: default_ttl)",
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 86400
+            }
+          ]
+        },
+        "key": {
+          "description": "Stable key instead of the value in the record key, so changing the value updates the record in place",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "comment": {
+          "description": "Comment shown in the Cloudflare dashboard (default: default_comment)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags, added to default_tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "description": "Record settings (provider v5 only)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flatten_cname": {
+              "type": "boolean"
+            },
+            "ipv4_only": {
+              "type": "boolean"
+            },
+            "ipv6_only": {
+              "type": "boolean"
+            }
+          }
+        },
+        "proxied": {
+          "description": "Proxied by Cloudflare (default: default_proxied)",
+          "type": "boolean"
+        },
+        "content": {
+          "description": "IPv4 address",
+          "type": "string",
+          "format": "ipv4"
+        }
+      }
+    },
+    "AAAA": {
+      "description": "AAAA record",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "content"
+      ],
+      "properties": {
+        "ttl": {
+          "description": "TTL in seconds, 1 for automatic (default: default_ttl)",
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 86400
+            }
+          ]
+        },
+        "key": {
+          "description": "Stable key instead of the value in the record key, so changing the value updates the record in place",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "comment": {
+          "description": "Comment shown in the Cloudflare dashboard (default: default_comment)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags, added to default_tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "description": "Record settings (provider v5 only)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flatten_cname": {
+              "type": "boolean"
+            },
+            "ipv4_only": {
+              "type": "boolean"
+            },
+            "ipv6_only": {
+              "type": "boolean"
+            }
+          }
+        },
+        "proxied": {
+          "description": "Proxied by Cloudflare (default: default_proxied)",
+          "type": "boolean"
+        },
+        "content": {
+          "description": "IPv6 address",
+          "type": "string",
+          "format": "ipv6"
+        }
+      }
+    },
+    "CNAME": {
+      "description": "CNAME record",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "content"
+      ],
+      "properties": {
+        "ttl": {
+          "description": "TTL in seconds, 1 for automatic (default: default_ttl)",
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 86400
+            }
+          ]
+        },
+        "key": {
+          "description": "Stable key instead of the value in the record key, so changing the value updates the record in place",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "comment": {
+          "description": "Comment shown in the Cloudflare dashboard (default: default_comment)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags, added to default_tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "description": "Record settings (provider v5 only)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flatten_cname": {
+              "type": "boolean"
+            },
+            "ipv4_only": {
+              "type": "boolean"
+            },
+            "ipv6_only": {
+              "type": "boolean"
+            }
+          }
+        },
+        "proxied": {
+          "description": "Proxied by Cloudflare (default: default_proxied)",
+          "type": "boolean"
+        },
+        "content": {
+          "description": "Target hostname",
+          "type": "string"
+        }
+      }
+    },
+    "ALIASES": {
+      "description": "CNAMEs pointing to this name (or to the prefixed name)",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "content"
+      ],
+      "properties": {
+        "ttl": {
+          "description": "TTL in seconds, 1 for automatic (default: default_ttl)",
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 86400
+            }
+          ]
+        },
+        "key": {
+          "description": "Stable key instead of the value in the record key, so changing the value updates the record in place",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "comment": {
+          "description": "Comment shown in the Cloudflare dashboard (default: default_comment)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags, added to default_tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "description": "Record settings (provider v5 only)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flatten_cname": {
+              "type": "boolean"
+            },
+            "ipv4_only": {
+              "type": "boolean"
+            },
+            "ipv6_only": {
+              "type": "boolean"
+            }
+          }
+        },
+        "proxied": {
+          "description": "Proxied by Cloudflare (default: default_proxied)",
+          "type": "boolean"
+        },
+        "content": {
+          "description": "Name of a CNAME pointing to this name",
+          "type": "string",
+          "pattern": "^(\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*$"
+        }
+      }
+    },
+    "NS": {
+      "description": "NS record",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "content"
+      ],
+      "properties": {
+        "ttl": {
+          "description": "TTL in seconds, 1 for automatic (default: default_ttl)",
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 86400
+            }
+          ]
+        },
+        "key": {
+          "description": "Stable key instead of the value in the record key, so changing the value updates the record in place",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "comment": {
+          "description": "Comment shown in the Cloudflare dashboard (default: default_comment)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags, added to default_tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "description": "Record settings (provider v5 only)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flatten_cname": {
+              "type": "boolean"
+            },
+            "ipv4_only": {
+              "type": "boolean"
+            },
+            "ipv6_only": {
+              "type": "boolean"
+            }
+          }
+        },
+        "content": {
+          "description": "Name server hostname",
+          "type": "string"
+        }
+      }
+    },
+    "PTR": {
+      "description": "PTR record",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "content"
+      ],
+      "properties": {
+        "ttl": {
+          "description": "TTL in seconds, 1 for automatic (default: default_ttl)",
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 86400
+            }
+          ]
+        },
+        "key": {
+          "description": "Stable key instead of the value in the record key, so changing the value updates the record in place",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "comment": {
+          "description": "Comment shown in the Cloudflare dashboard (default: default_comment)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags, added to default_tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "description": "Record settings (provider v5 only)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flatten_cname": {
+              "type": "boolean"
+            },
+            "ipv4_only": {
+              "type": "boolean"
+            },
+            "ipv6_only": {
+              "type": "boolean"
+            }
+          }
+        },
+        "content": {
+          "description": "Hostname",
+          "type": "string"
+        }
+      }
+    },
+    "TXT": {
+      "description": "TXT record",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "content"
+      ],
+      "properties": {
+        "ttl": {
+          "description": "TTL in seconds, 1 for automatic (default: default_ttl)",
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 86400
+            }
+          ]
+        },
+        "key": {
+          "description": "Stable key instead of the value in the record key, so changing the value updates the record in place",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "comment": {
+          "description": "Comment shown in the Cloudflare dashboard (default: default_comment)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags, added to default_tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "description": "Record settings (provider v5 only)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flatten_cname": {
+              "type": "boolean"
+            },
+            "ipv4_only": {
+              "type": "boolean"
+            },
+            "ipv6_only": {
+              "type": "boolean"
+            }
+          }
+        },
+        "content": {
+          "description": "Text value",
+          "type": "string",
+          "maxLength": 2048
+        }
+      }
+    },
+    "OPENPGPKEY": {
+      "description": "OPENPGPKEY record (provider v5 only)",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "content"
+      ],
+      "properties": {
+        "ttl": {
+          "description": "TTL in seconds, 1 for automatic (default: default_ttl)",
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 86400
+            }
+          ]
+        },
+        "key": {
+          "description": "Stable key instead of the value in the record key, so changing the value updates the record in place",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "comment": {
+          "description": "Comment shown in the Cloudflare dashboard (default: default_comment)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags, added to default_tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "description": "Record settings (provider v5 only)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flatten_cname": {
+              "type": "boolean"
+            },
+            "ipv4_only": {
+              "type": "boolean"
+            },
+            "ipv6_only": {
+              "type": "boolean"
+            }
+          }
+        },
+        "content": {
+          "description": "Public key",
+          "type": "string"
+        }
+      }
+    },
+    "MX": {
+      "description": "MX record",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "content",
+        "priority"
+      ],
+      "properties": {
+        "ttl": {
+          "description": "TTL in seconds, 1 for automatic (default: default_ttl)",
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 86400
+            }
+          ]
+        },
+        "key": {
+          "description": "Stable key instead of the value in the record key, so changing the value updates the record in place",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "comment": {
+          "description": "Comment shown in the Cloudflare dashboard (default: default_comment)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags, added to default_tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "description": "Record settings (provider v5 only)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flatten_cname": {
+              "type": "boolean"
+            },
+            "ipv4_only": {
+              "type": "boolean"
+            },
+            "ipv6_only": {
+              "type": "boolean"
+            }
+          }
+        },
+        "content": {
+          "description": "Mail server hostname",
+          "type": "string"
+        },
+        "priority": {
+          "description": "Priority, lower is preferred",
+          "type": "integer"
+        }
+      }
+    },
+    "CAA": {
+      "description": "CAA record",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "content",
+        "tag"
+      ],
+      "properties": {
+        "ttl": {
+          "description": "TTL in seconds, 1 for automatic (default: default_ttl)",
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 86400
+            }
+          ]
+        },
+        "key": {
+          "description": "Stable key instead of the value in the record key, so changing the value updates the record in place",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "comment": {
+          "description": "Comment shown in the Cloudflare dashboard (default: default_comment)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags, added to default_tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "description": "Record settings (provider v5 only)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flatten_cname": {
+              "type": "boolean"
+            },
+            "ipv4_only": {
+              "type": "boolean"
+            },
+            "ipv6_only": {
+              "type": "boolean"
+            }
+          }
+        },
+        "content": {
+          "description": "Value, e.g. letsencrypt.org",
+          "type": "string"
+        },
+        "tag": {
+          "description": "Property",
+          "enum": [
+            "issue",
+            "issuewild",
+            "iodef"
+          ]
+        },
+        "flags": {
+          "description": "Flags (default: 0)",
+          "type": "integer"
+        }
+      }
+    },
+    "CERT": {
+      "description": "CERT record",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "ttl": {
+          "description": "TTL in seconds, 1 for automatic (default: default_ttl)",
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 86400
+            }
+          ]
+        },
+        "key": {
+          "description": "Stable key instead of the value in the record key, so changing the value updates the record in place",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "comment": {
+          "description": "Comment shown in the Cloudflare dashboard (default: default_comment)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags, added to default_tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "description": "Record settings (provider v5 only)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flatten_cname": {
+              "type": "boolean"
+            },
+            "ipv4_only": {
+              "type": "boolean"
+            },
+            "ipv6_only": {
+              "type": "boolean"
+            }
+          }
+        },
+        "data": {
+          "description": "CERT fields",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "key_tag",
+            "algorithm",
+            "certificate"
+          ],
+          "properties": {
+            "type": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "key_tag": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "algorithm": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "certificate": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "DNSKEY": {
+      "description": "DNSKEY record",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "ttl": {
+          "description": "TTL in seconds, 1 for automatic (default: default_ttl)",
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 86400
+            }
+          ]
+        },
+        "key": {
+          "description": "Stable key instead of the value in the record key, so changing the value updates the record in place",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "comment": {
+          "description": "Comment shown in the Cloudflare dashboard (default: default_comment)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags, added to default_tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "description": "Record settings (provider v5 only)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flatten_cname": {
+              "type": "boolean"
+            },
+            "ipv4_only": {
+              "type": "boolean"
+            },
+            "ipv6_only": {
+              "type": "boolean"
+            }
+          }
+        },
+        "data": {
+          "description": "DNSKEY fields",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "flags",
+            "protocol",
+            "algorithm",
+            "public_key"
+          ],
+          "properties": {
+            "flags": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "protocol": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "algorithm": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "public_key": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "DS": {
+      "description": "DS record",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "ttl": {
+          "description": "TTL in seconds, 1 for automatic (default: default_ttl)",
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 86400
+            }
+          ]
+        },
+        "key": {
+          "description": "Stable key instead of the value in the record key, so changing the value updates the record in place",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "comment": {
+          "description": "Comment shown in the Cloudflare dashboard (default: default_comment)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags, added to default_tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "description": "Record settings (provider v5 only)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flatten_cname": {
+              "type": "boolean"
+            },
+            "ipv4_only": {
+              "type": "boolean"
+            },
+            "ipv6_only": {
+              "type": "boolean"
+            }
+          }
+        },
+        "data": {
+          "description": "DS fields",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "key_tag",
+            "algorithm",
+            "digest_type",
+            "digest"
+          ],
+          "properties": {
+            "key_tag": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "algorithm": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "digest_type": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "digest": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "HTTPS": {
+      "description": "HTTPS record",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "ttl": {
+          "description": "TTL in seconds, 1 for automatic (default: default_ttl)",
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 86400
+            }
+          ]
+        },
+        "key": {
+          "description": "Stable key instead of the value in the record key, so changing the value updates the record in place",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "comment": {
+          "description": "Comment shown in the Cloudflare dashboard (default: default_comment)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags, added to default_tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "description": "Record settings (provider v5 only)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flatten_cname": {
+              "type": "boolean"
+            },
+            "ipv4_only": {
+              "type": "boolean"
+            },
+            "ipv6_only": {
+              "type": "boolean"
+            }
+          }
+        },
+        "data": {
+          "description": "HTTPS fields",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "priority",
+            "target"
+          ],
+          "properties": {
+            "priority": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "target": {
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "LOC": {
+      "description": "LOC record",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "ttl": {
+          "description": "TTL in seconds, 1 for automatic (default: default_ttl)",
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 86400
+            }
+          ]
+        },
+        "key": {
+          "description": "Stable key instead of the value in the record key, so changing the value updates the record in place",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "comment": {
+          "description": "Comment shown in the Cloudflare dashboard (default: default_comment)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags, added to default_tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "description": "Record settings (provider v5 only)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flatten_cname": {
+              "type": "boolean"
+            },
+            "ipv4_only": {
+              "type": "boolean"
+            },
+            "ipv6_only": {
+              "type": "boolean"
+            }
+          }
+        },
+        "data": {
+          "description": "LOC fields",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "lat_degrees",
+            "lat_minutes",
+            "lat_seconds",
+            "lat_direction",
+            "long_degrees",
+            "long_minutes",
+            "long_seconds",
+            "long_direction"
+          ],
+          "properties": {
+            "lat_degrees": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "lat_minutes": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "lat_seconds": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "lat_direction": {
+              "enum": [
+                "N",
+                "S"
+              ]
+            },
+            "long_degrees": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "long_minutes": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "long_seconds": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "long_direction": {
+              "enum": [
+                "E",
+                "W"
+              ]
+            },
+            "altitude": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "size": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "precision_horz": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "precision_vert": {
+              "type": [
+                "number",
+                "string"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "NAPTR": {
+      "description": "NAPTR record",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "ttl": {
+          "description": "TTL in seconds, 1 for automatic (default: default_ttl)",
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 86400
+            }
+          ]
+        },
+        "key": {
+          "description": "Stable key instead of the value in the record key, so changing the value updates the record in place",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "comment": {
+          "description": "Comment shown in the Cloudflare dashboard (default: default_comment)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags, added to default_tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "description": "Record settings (provider v5 only)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flatten_cname": {
+              "type": "boolean"
+            },
+            "ipv4_only": {
+              "type": "boolean"
+            },
+            "ipv6_only": {
+              "type": "boolean"
+            }
+          }
+        },
+        "data": {
+          "description": "NAPTR fields",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "order",
+            "preference",
+            "replacement"
+          ],
+          "properties": {
+            "order": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "preference": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "flags": {
+              "type": "string"
+            },
+            "service": {
+              "type": "string"
+            },
+            "regex": {
+              "type": "string"
+            },
+            "replacement": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "SMIMEA": {
+      "description": "SMIMEA record",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "ttl": {
+          "description": "TTL in seconds, 1 for automatic (default: default_ttl)",
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 86400
+            }
+          ]
+        },
+        "key": {
+          "description": "Stable key instead of the value in the record key, so changing the value updates the record in place",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "comment": {
+          "description": "Comment shown in the Cloudflare dashboard (default: default_comment)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags, added to default_tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "description": "Record settings (provider v5 only)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flatten_cname": {
+              "type": "boolean"
+            },
+            "ipv4_only": {
+              "type": "boolean"
+            },
+            "ipv6_only": {
+              "type": "boolean"
+            }
+          }
+        },
+        "data": {
+          "description": "SMIMEA fields",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "usage",
+            "selector",
+            "matching_type",
+            "certificate"
+          ],
+          "properties": {
+            "usage": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "selector": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "matching_type": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "certificate": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "SRV": {
+      "description": "SRV record",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "ttl": {
+          "description": "TTL in seconds, 1 for automatic (default: default_ttl)",
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 86400
+            }
+          ]
+        },
+        "key": {
+          "description": "Stable key instead of the value in the record key, so changing the value updates the record in place",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "comment": {
+          "description": "Comment shown in the Cloudflare dashboard (default: default_comment)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags, added to default_tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "description": "Record settings (provider v5 only)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flatten_cname": {
+              "type": "boolean"
+            },
+            "ipv4_only": {
+              "type": "boolean"
+            },
+            "ipv6_only": {
+              "type": "boolean"
+            }
+          }
+        },
+        "data": {
+          "description": "SRV fields",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "priority",
+            "weight",
+            "port",
+            "target"
+          ],
+          "properties": {
+            "priority": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "weight": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "port": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "target": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "SSHFP": {
+      "description": "SSHFP record",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "ttl": {
+          "description": "TTL in seconds, 1 for automatic (default: default_ttl)",
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 86400
+            }
+          ]
+        },
+        "key": {
+          "description": "Stable key instead of the value in the record key, so changing the value updates the record in place",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "comment": {
+          "description": "Comment shown in the Cloudflare dashboard (default: default_comment)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags, added to default_tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "description": "Record settings (provider v5 only)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flatten_cname": {
+              "type": "boolean"
+            },
+            "ipv4_only": {
+              "type": "boolean"
+            },
+            "ipv6_only": {
+              "type": "boolean"
+            }
+          }
+        },
+        "data": {
+          "description": "SSHFP fields",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "algorithm",
+            "type",
+            "fingerprint"
+          ],
+          "properties": {
+            "algorithm": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "type": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "fingerprint": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "SVCB": {
+      "description": "SVCB record",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "ttl": {
+          "description": "TTL in seconds, 1 for automatic (default: default_ttl)",
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 86400
+            }
+          ]
+        },
+        "key": {
+          "description": "Stable key instead of the value in the record key, so changing the value updates the record in place",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "comment": {
+          "description": "Comment shown in the Cloudflare dashboard (default: default_comment)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags, added to default_tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "description": "Record settings (provider v5 only)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flatten_cname": {
+              "type": "boolean"
+            },
+            "ipv4_only": {
+              "type": "boolean"
+            },
+            "ipv6_only": {
+              "type": "boolean"
+            }
+          }
+        },
+        "data": {
+          "description": "SVCB fields",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "priority",
+            "target"
+          ],
+          "properties": {
+            "priority": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "target": {
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "TLSA": {
+      "description": "TLSA record",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "ttl": {
+          "description": "TTL in seconds, 1 for automatic (default: default_ttl)",
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 86400
+            }
+          ]
+        },
+        "key": {
+          "description": "Stable key instead of the value in the record key, so changing the value updates the record in place",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "comment": {
+          "description": "Comment shown in the Cloudflare dashboard (default: default_comment)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags, added to default_tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "description": "Record settings (provider v5 only)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flatten_cname": {
+              "type": "boolean"
+            },
+            "ipv4_only": {
+              "type": "boolean"
+            },
+            "ipv6_only": {
+              "type": "boolean"
+            }
+          }
+        },
+        "data": {
+          "description": "TLSA fields",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "usage",
+            "selector",
+            "matching_type",
+            "certificate"
+          ],
+          "properties": {
+            "usage": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "selector": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "matching_type": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "certificate": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "URI": {
+      "description": "URI record",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "data",
+        "priority"
+      ],
+      "properties": {
+        "ttl": {
+          "description": "TTL in seconds, 1 for automatic (default: default_ttl)",
+          "anyOf": [
+            {
+              "const": 1
+            },
+            {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 86400
+            }
+          ]
+        },
+        "key": {
+          "description": "Stable key instead of the value in the record key, so changing the value updates the record in place",
+          "type": "string",
+          "pattern": "^\\S+$"
+        },
+        "comment": {
+          "description": "Comment shown in the Cloudflare dashboard (default: default_comment)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags, added to default_tags",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "settings": {
+          "description": "Record settings (provider v5 only)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "flatten_cname": {
+              "type": "boolean"
+            },
+            "ipv4_only": {
+              "type": "boolean"
+            },
+            "ipv6_only": {
+              "type": "boolean"
+            }
+          }
+        },
+        "data": {
+          "description": "URI fields",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "weight",
+            "target"
+          ],
+          "properties": {
+            "weight": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "target": {
+              "type": "string"
+            }
+          }
+        },
+        "priority": {
+          "description": "Priority, lower is preferred",
+          "type": "integer"
+        }
+      }
+    }
+  }
+}

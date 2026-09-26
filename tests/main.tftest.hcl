@@ -30,3 +30,52 @@ run "plan" {
     error_message = "No import lookup unless import_existing is true"
   }
 }
+
+run "unknown_attribute" {
+  command = plan
+
+  variables {
+    records = { "app" = { A = [{ content = "192.0.2.1", proxid = true }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "unknown_settings_attribute" {
+  command = plan
+
+  variables {
+    records = { "app" = { AAAA = [{ content = "2001:db8::1", settings = { ipv6_onyl = true } }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "record_is_not_an_object" {
+  command = plan
+
+  variables {
+    records = { "app" = { A = ["192.0.2.1"] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+# The same document as the schema tests, through yamldecode like a dns.yaml
+run "yaml_all_types" {
+  command = plan
+
+  variables {
+    records = yamldecode(file("tests/fixtures/all-types.yaml")).records
+  }
+
+  assert {
+    condition     = length(output.record_names) == 25
+    error_message = "All records of the fixture must be planned"
+  }
+
+  assert {
+    condition     = one([for k, r in module.v5.records : k if startswith(k, "office LOC")]) != null
+    error_message = "The LOC record with an unquoted N must be accepted"
+  }
+}

@@ -23,8 +23,16 @@ if [ "$(records modules/dns/v4/variables.tf)" != "$(records modules/dns/v5/varia
     echo "The records variable differs between modules/dns/v4 and modules/dns/v5" >&2
     status=1
 fi
-if [ "$(records modules/dns/records/variables.tf | awk '/^  validation/ { exit } { print }')" != "$(records modules/dns/v5/variables.tf | sed '$d')" ]; then
-    echo "The records variable type differs between modules/dns/records and modules/dns/v5" >&2
+# The entry points accept records as any and check attribute names themselves; the
+# allowed names must be the attributes of the typed records in the core module
+core_attributes() { records modules/dns/records/variables.tf | sed -nE "s/^ {$1}([a-z0-9_]+) +=.*optional\(.*/\1/p" | sort; }
+allowed() { grep -oE "\\[\"$1\"[^]]*\\]" modules/dns/v5/variables.tf | head -n 1 | grep -oE '[a-z0-9_]+' | sort; }
+if [ "$(core_attributes 10)" != "$(allowed content)" ]; then
+    echo "The allowed record attributes in modules/dns/v5/variables.tf differ from the records type of modules/dns/records" >&2
+    status=1
+fi
+if [ "$(core_attributes 12)" != "$(allowed flatten_cname)" ]; then
+    echo "The allowed settings attributes in modules/dns/v5/variables.tf differ from the records type of modules/dns/records" >&2
     status=1
 fi
 

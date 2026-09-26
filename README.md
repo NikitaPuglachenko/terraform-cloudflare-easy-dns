@@ -17,7 +17,7 @@ Each record becomes one Cloudflare DNS record, with a stable address in the Terr
 ```hcl
 module "dns" {
   source  = "NikitaPuglachenko/easy-dns/cloudflare"
-  version = "~> 2.5"
+  version = "~> 2.6"
 
   zone_id   = var.zone_id
   zone_name = "example.com"
@@ -51,6 +51,17 @@ Each record is an instance of `module.dns.module.v5.cloudflare_dns_record.record
 
 Everything else (all record types, defaults, import of existing records, validation) builds on this; see the [full example](#full-example) and the sections below.
 
+## Contents
+
+- [Features](#features), [Structure](#structure), [Requirements](#requirements)
+- [Usage](#usage): [HCL or YAML](#hcl-or-yaml) and the [full example](#full-example)
+- [Record Model](#record-model): [record types](#record-types), [aliases](#the-aliases-logic), [record keys](#record-keys)
+- [Validation](#validation), [Inputs](#inputs), [Outputs](#outputs)
+- [Records in YAML](#records-in-yaml) with editor support, [Recipes](#recipes)
+- [Importing Existing Records](#importing-existing-records)
+- [Upgrading and Migration](#upgrading-and-migration)
+- [Testing](#testing)
+
 ## Features
 
 - 📂 **Structured Schema**: Group records by their base name (subdomain or `@` for the zone apex).
@@ -63,6 +74,7 @@ Everything else (all record types, defaults, import of existing records, validat
 - 🔀 **Provider v4 and v5**: The same input schema for both major versions of the Cloudflare provider.
 - ✅ **Input Validation**: Mistakes in record types, names, IP addresses, TTL, MX or CAA fields fail at `plan`, before reaching the Cloudflare API.
 - 🏷 **Defaults, Comments and Tags**: Set the TTL, proxying, comment and tags once for all records, and override them per record.
+- ✍️ **Editor Support for YAML**: A JSON Schema for records kept in YAML, for completion and highlighting of mistakes before `plan`.
 - 🧪 **Tested End to End**: Every record type, updates, import and the v4 to v5 migration are tested against a real Cloudflare zone.
 
 ## Structure
@@ -74,8 +86,11 @@ modules/dns/
 ├── v4/        # Wrapper for Cloudflare provider v4 (cloudflare_record)
 └── v5/        # Wrapper for Cloudflare provider v5 (cloudflare_dns_record)
 examples/
-├── v4/        # Complete example for provider v4
-└── v5/        # Complete example for provider v5
+├── v5/        # Records in HCL
+├── yaml/      # Records in a YAML file, validated by the JSON Schema
+├── import/    # Adopting a zone that already has records
+└── v4/        # Provider v4, for existing configurations
+schema/        # JSON Schema for records in YAML
 ```
 
 Both wrappers share the same inputs, outputs and record keys, so switching between them only requires changing the `source`. The root module passes everything to the v5 wrapper, so it has the same inputs and outputs.
@@ -90,7 +105,7 @@ Both wrappers share the same inputs, outputs and record keys, so switching betwe
 
 If `zone_name` is not set, the module looks up the zone by `zone_id`, so the API token needs the `Zone:Read` permission.
 
-The v4 wrapper is kept for existing configurations. Provider v4 no longer gets new features, so new configurations should use v5 (the root module), and the v4 wrapper may be removed in a future major version. See [Migrating from v4 to v5](#migrating-from-v4-to-v5).
+The v4 wrapper is kept for existing configurations. Provider v4 no longer gets new features, so new configurations should use v5 (the root module), and the v4 wrapper may be removed in a future major version. See [Migrating from v4 to v5](#from-provider-v4-to-v5).
 
 ## Usage
 
@@ -101,7 +116,16 @@ The module is published on the [Terraform Registry](https://registry.terraform.i
 | v5 | `NikitaPuglachenko/easy-dns/cloudflare` |
 | v4 | `NikitaPuglachenko/easy-dns/cloudflare//modules/dns/v4` |
 
-Without the Registry (e.g. from a Git mirror), use a Git source with a tag: `git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git?ref=v2.5.3` for v5, or with `//modules/dns/v4` before `?ref=` for v4.
+Without the Registry (e.g. from a Git mirror), use a Git source with a tag: `git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git?ref=v2.6.0` for v5, or with `//modules/dns/v4` before `?ref=` for v4.
+
+### HCL or YAML
+
+Records can be written directly in `records` or kept in a YAML file passed through `yamldecode`. The module validates both the same way at `plan`; only YAML gets completion and highlighting of mistakes in the editor, through the [JSON Schema](#records-in-yaml):
+
+| | Records in HCL | Records in YAML |
+|:-|:-|:-|
+| Completion and mistakes highlighted in the editor | no (Terraform provides none inside `records`) | yes, with the JSON Schema |
+| Validation at `plan` (typos, types, IP addresses, `data` fields, ...) | yes | yes |
 
 ### Full Example
 
@@ -110,7 +134,7 @@ A zone with most of the features: the apex, nested names, aliases, CAA and a str
 ```hcl
 module "dns" {
   source  = "NikitaPuglachenko/easy-dns/cloudflare"
-  version = "~> 2.5"
+  version = "~> 2.6"
 
   zone_id   = var.zone_id
   zone_name = "example.com" # optional, looked up from zone_id when omitted
@@ -178,9 +202,9 @@ module "dns" {
 }
 ```
 
-Complete runnable configurations are available in [`examples/v4`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/examples/v4) and [`examples/v5`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/examples/v5).
+Complete runnable configurations are available in [`examples`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/examples): `v5` (records in HCL), `yaml` (records in a YAML file), `import` (adopting an existing zone) and `v4` (provider v4, for existing configurations).
 
-## How It Works
+## Record Model
 
 The module flattens the input map into a single map with a unique key for each record, which is then used in `for_each`.
 
@@ -189,7 +213,7 @@ Each key inside a base name block is a record type (`A`, `AAAA`, `CNAME`, `TXT`,
 
 ### Record Types
 
-Most records are defined by `content`. Structured records are defined by a `data` map instead, with the same fields as in the Cloudflare API:
+Most records are defined by `content`. Structured records are defined by a `data` map instead, with the same fields as in the Cloudflare API. The module only checks which fields are present; what the fields and their values mean is described in the Cloudflare [DNS record types](https://developers.cloudflare.com/dns/manage-dns-records/reference/dns-record-types/) and in the `data` attribute of [`cloudflare_dns_record`](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/dns_record), as are `settings`:
 
 | Type | Defined by | `data` fields (optional in italics) |
 |------|-----------|--------------------------------------|
@@ -262,6 +286,8 @@ Two records that produce the same key (e.g. the same value listed twice, or a `C
 
 The `records` input is validated before any API call:
 
+- Record attributes must be known: a misspelled attribute such as `proxid = true` fails with `records["app"]["A"][0]: unknown attribute "proxid"` instead of being ignored, and the same for `settings`
+
 - Supported record types: see [Record Types](#record-types), plus `ALIASES` (with an optional prefix, e.g. `"_acme-challenge.TXT"`)
 - Records defined by `content` must have a non-empty `content`
 - Structured records must have `data` with only the fields of their type and all required ones; other records must not set `data`
@@ -278,7 +304,9 @@ The `records` input is validated before any API call:
 
 ## Inputs
 
-Both wrappers take `zone_id`, `zone_name` (optional, looked up from `zone_id` when omitted), `records` and the [defaults](#defaults-comments-and-tags); the v5 wrapper also takes `import_existing`. The full reference of inputs, outputs, requirements and resources is generated from the code with [terraform-docs](https://terraform-docs.io): [`modules/dns/v4`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/modules/dns/v4), [`modules/dns/v5`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/modules/dns/v5). The inputs of the root module are also shown on the [Terraform Registry](https://registry.terraform.io/modules/NikitaPuglachenko/easy-dns/cloudflare/latest?tab=inputs).
+Both wrappers take `zone_id`, `zone_name` (optional, looked up from `zone_id` when omitted), `records` and the [defaults](#defaults-comments-and-tags); the v5 wrapper also takes `import_existing`.
+
+The type of `records` is shown as `any`: Terraform silently drops unknown attributes when it converts a value to an object type, so the module accepts the value as is, rejects unknown attributes, and then converts it to the typed structure described in [Record Object Schema](#record-object-schema). The full reference of inputs, outputs, requirements and resources is generated from the code with [terraform-docs](https://terraform-docs.io): [`modules/dns/v4`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/modules/dns/v4), [`modules/dns/v5`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/modules/dns/v5). The inputs of the root module are also shown on the [Terraform Registry](https://registry.terraform.io/modules/NikitaPuglachenko/easy-dns/cloudflare/latest?tab=inputs).
 
 ### Record Object Schema
 
@@ -310,7 +338,7 @@ Values that most records share can be set once for the module call, and overridd
 ```hcl
 module "dns" {
   source  = "NikitaPuglachenko/easy-dns/cloudflare"
-  version = "~> 2.5"
+  version = "~> 2.6"
 
   zone_id         = var.zone_id
   zone_name       = "example.com"
@@ -329,14 +357,47 @@ module "dns" {
 }
 ```
 
-Cloudflare supports record tags only on some plans; on other plans, leave `default_tags` and `tags` empty.
+Cloudflare supports record tags only on some plans and limits the length of comments by plan, see [DNS record comments and tags](https://developers.cloudflare.com/dns/manage-dns-records/reference/record-attributes/); on other plans, leave `default_tags` and `tags` empty.
 
 ## Outputs
 
 - `record_names`: names of all managed records
 - `records`: managed records keyed by their [record key](#record-keys), with `id`, `name`, `type` and `content`
-- `state_migration`: map of the record keys used by 1.x to the current ones, see [Upgrading from v1](#upgrading-from-v1)
+- `state_migration`: map of the record keys used by 1.x to the current ones, see [Upgrading from v1](#from-v1-to-v2)
 - `import_ids` (v5): import IDs of records that already exist in the zone, see [Importing Existing Records](#importing-existing-records)
+
+## Records in YAML
+
+Records can be kept in a YAML file and passed with `yamldecode`:
+
+```hcl
+records = yamldecode(file("${path.module}/records.easy-dns.yaml")).records
+```
+
+`schema/records.schema.json` is a JSON Schema for such a file (a document with a `records` key). Editors use it for completion of record types, attributes and `data` fields, and highlight mistakes such as `proxid`, `ttl: 5m` or a CAA `tag` that does not exist before `terraform plan`:
+
+The schema URL of this version is [`https://raw.githubusercontent.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/v2.6.0/schema/records.schema.json`](https://raw.githubusercontent.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/v2.6.0/schema/records.schema.json).
+
+Name the files `*.easy-dns.yaml` (e.g. `records.easy-dns.yaml`) and map this pattern to the schema once:
+
+- **JetBrains IDEs**: Settings, Languages & Frameworks, Schemas and DTDs, JSON Schema Mappings: add the schema URL with the file path pattern `*.easy-dns.yaml`.
+- **VS Code** (with the YAML extension): in the settings,
+
+  ```json
+  "yaml.schemas": { "<schema URL>": "*.easy-dns.yaml" }
+  ```
+
+Alternatively, a comment at the top of a file links the schema regardless of its name:
+
+```yaml
+# yaml-language-server: $schema=<schema URL>
+```
+
+See [`examples/yaml`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/examples/yaml).
+
+Use the schema of the module version you use. For records written in HCL, there is no such completion (see [HCL or YAML](#hcl-or-yaml)); mistakes are reported at `plan`.
+
+`yamldecode` follows YAML 1.1, where unquoted `yes`, `no`, `on`, `off`, `y` and `n` (in any case) are booleans; quote such values, e.g. `content: "on"`. The module accepts the unquoted `N` of a LOC `lat_direction`.
 
 ## Recipes
 
@@ -396,7 +457,7 @@ A service advertised with SRV:
 
 ## Importing Existing Records
 
-When the zone already has records, the first `apply` would fail with "record already exists" for each of them. With provider v5, the module can find the existing records and adopt them into the state instead:
+When the zone already has records, the first `apply` would fail with "record already exists" for each of them. With provider v5 (the root module or the `v5` submodule), the module can find the existing records and adopt them into the state instead. It works the same with records in HCL or in YAML; see [`examples/import`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/examples/import).
 
 1. Set `import_existing = true`. The module then reads the records of the zone (the API token needs the `DNS Read` permission) and matches them to the configured records by name, type and value. The records are read with one request per record type of the configuration, which avoids a provider crash on zones with CAA records ([cloudflare/terraform-provider-cloudflare#7004](https://github.com/cloudflare/terraform-provider-cloudflare/issues/7004)).
 2. Add an `import` block next to the module call:
@@ -418,11 +479,23 @@ For structured records (`SRV`, `HTTPS`, `TLSA`, ...), provider v5 plans a one-ti
 
 Matching ignores case, a trailing dot and the quoting of TXT values. A record is imported only when exactly one existing record matches it: when the zone has several identical records, the record is not imported and `plan` shows it as created, so the duplicates can be cleaned up first.
 
-## Upgrading from v1
+## Upgrading and Migration
+
+### Upgrade Path
+
+Do one step at a time, each with its own `terraform plan` and `apply`, and review every plan: it must not destroy or create records.
+
+1. **From v1 to v2** (record keys): [v1 to v2](#from-v1-to-v2), staying on the submodule you already use. Targeting 2.6 or later, fix any [unknown attributes](#to-26-unknown-attributes) as part of this step.
+2. **From provider v4 to v5**, if you use the `v4` submodule: [provider v4 to v5](#from-provider-v4-to-v5).
+3. **To the root module**, optionally: [v5 submodule to the root module](#from-the-v5-submodule-to-the-root-module).
+
+For example, a configuration on `//modules/dns/v5` of v1 does step 1 with `RESOURCE=cloudflare_dns_record` and may stay on the submodule. From 2.0–2.5, upgrading to 2.6 or later only needs the [unknown attributes](#to-26-unknown-attributes) fixed, if there are any.
+
+### From v1 to v2
 
 Version 2 changes the record keys in the state (see [Record Keys](#record-keys)). Without migration, Terraform would destroy and recreate every record. The `state_migration` output maps the old keys to the new ones, so the migration can be done with `moved` blocks:
 
-1. Change the module `ref` to `v2.x` and run `terraform init -upgrade`.
+1. Change the module version to 2.x (`version` for the Registry, `?ref=` for a Git source), keeping the same submodule (`//modules/dns/v4` or `//modules/dns/v5`), and run `terraform init -upgrade`. With 2.6 or later, fix any [unknown attributes](#to-26-unknown-attributes) first, otherwise `terraform console` in the next step fails.
 2. Generate `moved` blocks (requires `jq`). Set `MODULE` to the module address and `RESOURCE` to `cloudflare_record` for the `v4` submodule or `cloudflare_dns_record` for the `v5` submodule (version 1 had no root module):
 
    ```sh
@@ -441,9 +514,20 @@ Version 2 changes the record keys in the state (see [Record Keys](#record-keys))
 3. Run `terraform plan`. It should only show records that have moved, with no records to add or destroy.
 4. Run `terraform apply`, then delete `dns_migration.tf`. The next `terraform plan` should show no changes.
 
-Upgrade the keys and switch from `v4` to `v5` in separate steps.
+### To 2.6: Unknown Attributes
 
-## Switching from the v5 Submodule to the Root Module
+Since 2.6, a record attribute that the module does not know fails the plan, e.g. `records["app"]["A"][0]: unknown attribute "proxid"`. Before, Terraform silently dropped such attributes, so a misspelled optional attribute had no effect. Fix the reported attributes: the plan then shows whether the corrected attributes change any records (e.g. a record that was meant to be proxied). For records in YAML, the [JSON Schema](#records-in-yaml) highlights these mistakes in the editor.
+
+### From Provider v4 to v5
+
+The v5 wrapper contains a `moved` block from `cloudflare_record` to `cloudflare_dns_record`, so the state is migrated without recreating records:
+
+1. Upgrade the Cloudflare provider to `~> 5.26`.
+2. Change the module `source` from `//modules/dns/v4` to `//modules/dns/v5`, keeping the module name the same. To go straight to the root module, also add the `moved` block from [the v5 submodule to the root module](#from-the-v5-submodule-to-the-root-module), with `cloudflare_record` in `from`.
+3. Run `terraform init -upgrade` and `terraform plan`. The plan should only show moved resources, without destroying or creating records; provider v5 also plans a one-time in-place update of the moved records (e.g. CAA `flags` become numbers). Review it carefully before applying.
+4. Run `terraform apply`. Provider v5 (checked with 5.26) may report `Provider produced inconsistent result after apply` with `.modified_on` for some records: the timestamp in the migrated state has a different precision ([cloudflare/terraform-provider-cloudflare#7387](https://github.com/cloudflare/terraform-provider-cloudflare/issues/7387)). The records are updated anyway; run `terraform plan` again, it should show no changes.
+
+### From the v5 Submodule to the Root Module
 
 The root module wraps the v5 submodule, so its records have one more level in their address. When switching `source` from `NikitaPuglachenko/easy-dns/cloudflare//modules/dns/v5` (or a Git source with `//modules/dns/v5`) to the root module, add a `moved` block next to the module call, so the records are not recreated:
 
@@ -456,15 +540,6 @@ moved {
 
 Run `terraform init -upgrade` and `terraform plan`: it should only show records that have moved. After `terraform apply`, the `moved` block can be removed. Staying on the submodule is fine as well.
 
-## Migrating from v4 to v5
-
-The v5 wrapper contains a `moved` block from `cloudflare_record` to `cloudflare_dns_record`, so the state is migrated without recreating records:
-
-1. Upgrade the Cloudflare provider to `~> 5.26`.
-2. Change the module `source` from `//modules/dns/v4` to `//modules/dns/v5`, keeping the module name the same. To go straight to the root module, also add the `moved` block from [Switching from the v5 Submodule to the Root Module](#switching-from-the-v5-submodule-to-the-root-module), with `cloudflare_record` in `from`.
-3. Run `terraform init -upgrade` and `terraform plan`. The plan should only show moved resources, without destroying or creating records; provider v5 also plans a one-time in-place update of the moved records (e.g. CAA `flags` become numbers). Review it carefully before applying.
-4. Run `terraform apply`. Provider v5 (checked with 5.26) may report `Provider produced inconsistent result after apply` with `.modified_on` for some records: the timestamp in the migrated state has a different precision ([cloudflare/terraform-provider-cloudflare#7387](https://github.com/cloudflare/terraform-provider-cloudflare/issues/7387)). The records are updated anyway; run `terraform plan` again, it should show no changes.
-
 ## Testing
 
 The core module, both wrappers and the examples have plan-only tests (the wrappers and examples use a mocked provider), no Cloudflare credentials needed:
@@ -475,13 +550,15 @@ terraform init
 terraform test
 ```
 
-The module READMEs are generated with [terraform-docs](https://terraform-docs.io). After changing variables, outputs or requirements, regenerate them:
+The module READMEs are generated with [terraform-docs](https://terraform-docs.io), and the JSON Schema with a script that reads the record types and `data` fields from the records module. After changing variables, outputs, requirements or record types, regenerate them:
 
 ```sh
 ./scripts/generate-docs.sh
+python3 scripts/generate-schema.py
+python3 scripts/test-schema.py   # requires jsonschema and pyyaml
 ```
 
-CI runs `terraform fmt`, `validate` and `test` for the root module, the core module, both wrappers and the examples (on Terraform 1.8 and the latest version, and on the minimum supported provider versions), checks that the module READMEs are up to date and that the root module and the wrappers have the same interface, [TFLint](https://github.com/terraform-linters/tflint) and [Gitleaks](https://github.com/gitleaks/gitleaks) on every pull request.
+CI runs `terraform fmt`, `validate` and `test` for the root module, the core module, both wrappers and the examples (on Terraform 1.8 and the latest version, and on the minimum supported provider versions), checks that the module READMEs and the JSON Schema are up to date, tests the schema, checks that the root module and the wrappers have the same interface, [TFLint](https://github.com/terraform-linters/tflint) and [Gitleaks](https://github.com/gitleaks/gitleaks) on every pull request.
 
 ### End-to-End Tests
 

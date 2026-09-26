@@ -73,6 +73,8 @@ locals {
         contains(["HTTPS", "SVCB"], r.type) ? merge(r.rec.data, {
           target = endswith(r.rec.data.target, ".") ? r.rec.data.target : "${r.rec.data.target}."
         }) :
+        # yamldecode reads an unquoted N as false (YAML 1.1); for LOC it can only mean north
+        r.type == "LOC" ? merge(r.rec.data, lookup(r.rec.data, "lat_direction", "") == "false" ? { lat_direction = "N" } : {}) :
         contains(local.data_types, r.type) ? r.rec.data :
         null
       )

@@ -4,6 +4,24 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-09-26
+
+### Added
+
+- JSON Schema `schema/records.schema.json` for records kept in YAML, for completion and validation in editors; it is generated from the records module and tested in CI, also against the module through `yamldecode`
+- Examples `examples/yaml` (records in `records.easy-dns.yaml`, checked by the schema in CI) and `examples/import` (adopting an existing zone)
+- Unknown record attributes fail at `plan` with the record and the attribute, e.g. `records["app"]["A"][0]: unknown attribute "proxid"`, also inside `settings`; before, Terraform silently dropped them, so a misspelled optional attribute was ignored
+
+### Fixed
+
+- A LOC record from YAML with an unquoted `lat_direction: N` failed, since `yamldecode` reads it as `false`; it is now read as `N`
+
+### Changed
+
+- `examples/v5` uses the root module, like the Registry source
+- README: HCL or YAML compared, links to the Cloudflare documentation of record types, `data`, `settings`, comments and tags; a table of contents, the detailed "How It Works" is now "Record Model", and the upgrade and migration guides are one section with the order of the steps and a guide for unknown attributes when upgrading to 2.6
+- The `records` input of the root module and the wrappers has the type `any`, so unknown attributes reach the check; the record schema is in the input description and the README, and the records module still converts the value to the typed structure
+
 ## [2.5.3] - 2026-09-26
 
 ### Fixed
@@ -127,7 +145,8 @@ All notable changes to this project are documented in this file. The format is b
 - Inline aliases pointed to a relative name instead of the full hostname
 - Zone apex (`@`) handling for aliases and nested names
 
-[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.5.3...HEAD
+[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.6.0...HEAD
+[2.6.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.5.3...v2.6.0
 [2.5.3]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.5.2...v2.5.3
 [2.5.2]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.5.1...v2.5.2
 [2.5.1]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.5.0...v2.5.1
