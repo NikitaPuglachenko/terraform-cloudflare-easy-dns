@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-09-26
+
+### Added
+
+- Root module wrapping the v5 wrapper, so `source = "NikitaPuglachenko/easy-dns/cloudflare"` works as shown on the Terraform Registry; the submodules are unchanged
+- CI check that the root module and the wrappers have the same inputs and outputs
+
+### Changed
+
+- README and examples use the Terraform Registry source; links point to GitHub, so they work on the Registry page
+- README describes switching from the v5 submodule to the root module with a `moved` block
+
 ## [2.3.0] - 2026-09-26
 
 ### Added
@@ -79,7 +91,8 @@ All notable changes to this project are documented in this file. The format is b
 - Inline aliases pointed to a relative name instead of the full hostname
 - Zone apex (`@`) handling for aliases and nested names
 
-[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.3.0...HEAD
+[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.0.0...v2.1.0
