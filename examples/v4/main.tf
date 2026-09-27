@@ -1,6 +1,6 @@
 module "dns" {
   # Outside of this repository use the Terraform Registry:
-  #   source  = "NikitaPuglachenko/easy-dns/cloudflare//modules/dns/v4"
+  #   source  = "i386dev/easy-dns/cloudflare//modules/dns/v4"
   #   version = "~> 2.6"
   source = "../../modules/dns/v4"
 

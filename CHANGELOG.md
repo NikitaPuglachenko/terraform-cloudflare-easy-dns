@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.6.1] - 2026-09-27
+
+### Changed
+
+- The repository moved to [i386dev/terraform-cloudflare-easy-dns](https://github.com/i386dev/terraform-cloudflare-easy-dns) and the module to the Registry source `i386dev/easy-dns/cloudflare`; the README, examples, badges and the schema `$id` use the new addresses, and the README describes switching `source` from `NikitaPuglachenko/easy-dns/cloudflare`
+
 ## [2.6.0] - 2026-09-26
 
 ### Added
@@ -145,16 +151,16 @@ All notable changes to this project are documented in this file. The format is b
 - Inline aliases pointed to a relative name instead of the full hostname
 - Zone apex (`@`) handling for aliases and nested names
 
-[Unreleased]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.6.0...HEAD
-[2.6.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.5.3...v2.6.0
-[2.5.3]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.5.2...v2.5.3
-[2.5.2]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.5.1...v2.5.2
-[2.5.1]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.5.0...v2.5.1
-[2.5.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.4.0...v2.5.0
-[2.4.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.3.0...v2.4.0
-[2.3.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.2.0...v2.3.0
-[2.2.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.1.0...v2.2.0
-[2.1.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v2.0.0...v2.1.0
-[2.0.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v1.1.0...v2.0.0
-[1.1.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/releases/tag/v1.0.0
+[Unreleased]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.0...HEAD
+[2.6.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.5.3...v2.6.0
+[2.5.3]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.5.2...v2.5.3
+[2.5.2]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.5.1...v2.5.2
+[2.5.1]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.5.0...v2.5.1
+[2.5.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.4.0...v2.5.0
+[2.4.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.3.0...v2.4.0
+[2.3.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.2.0...v2.3.0
+[2.2.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.1.0...v2.2.0
+[2.1.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.0.0...v2.1.0
+[2.0.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v1.1.0...v2.0.0
+[1.1.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/releases/tag/v1.0.0

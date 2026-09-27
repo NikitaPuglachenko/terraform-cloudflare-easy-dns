@@ -1,6 +1,6 @@
 # Cloudflare DNS Records Factory (Terraform Module)
 
-[![Terraform Registry](https://img.shields.io/badge/terraform-registry-7B42BC?logo=terraform)](https://registry.terraform.io/modules/NikitaPuglachenko/easy-dns/cloudflare/latest) [![Release](https://img.shields.io/github/v/release/NikitaPuglachenko/terraform-cloudflare-easy-dns)](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/releases/latest) [![CI](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/actions/workflows/ci.yml/badge.svg)](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/actions/workflows/ci.yml) [![End-to-end](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/actions/workflows/e2e.yml/badge.svg)](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/actions/workflows/e2e.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/blob/main/LICENSE)
+[![Terraform Registry](https://img.shields.io/badge/terraform-registry-7B42BC?logo=terraform)](https://registry.terraform.io/modules/i386dev/easy-dns/cloudflare/latest) [![Release](https://img.shields.io/github/v/release/i386dev/terraform-cloudflare-easy-dns)](https://github.com/i386dev/terraform-cloudflare-easy-dns/releases/latest) [![CI](https://github.com/i386dev/terraform-cloudflare-easy-dns/actions/workflows/ci.yml/badge.svg)](https://github.com/i386dev/terraform-cloudflare-easy-dns/actions/workflows/ci.yml) [![End-to-end](https://github.com/i386dev/terraform-cloudflare-easy-dns/actions/workflows/e2e.yml/badge.svg)](https://github.com/i386dev/terraform-cloudflare-easy-dns/actions/workflows/e2e.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/i386dev/terraform-cloudflare-easy-dns/blob/main/LICENSE)
 
 A flexible Terraform module to manage Cloudflare DNS records using a structured object-based approach. Instead of defining multiple record resources, you can define your entire DNS zone (or sub-sections of it) in a single hierarchical map.
 
@@ -16,7 +16,7 @@ Each record becomes one Cloudflare DNS record, with a stable address in the Terr
 
 ```hcl
 module "dns" {
-  source  = "NikitaPuglachenko/easy-dns/cloudflare"
+  source  = "i386dev/easy-dns/cloudflare"
   version = "~> 2.6"
 
   zone_id   = var.zone_id
@@ -109,14 +109,14 @@ The v4 wrapper is kept for existing configurations. Provider v4 no longer gets n
 
 ## Usage
 
-The module is published on the [Terraform Registry](https://registry.terraform.io/modules/NikitaPuglachenko/easy-dns/cloudflare/latest):
+The module is published on the [Terraform Registry](https://registry.terraform.io/modules/i386dev/easy-dns/cloudflare/latest):
 
 | Cloudflare provider | `source` |
 |---------------------|----------|
-| v5 | `NikitaPuglachenko/easy-dns/cloudflare` |
-| v4 | `NikitaPuglachenko/easy-dns/cloudflare//modules/dns/v4` |
+| v5 | `i386dev/easy-dns/cloudflare` |
+| v4 | `i386dev/easy-dns/cloudflare//modules/dns/v4` |
 
-Without the Registry (e.g. from a Git mirror), use a Git source with a tag: `git::https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns.git?ref=v2.6.0` for v5, or with `//modules/dns/v4` before `?ref=` for v4.
+Without the Registry (e.g. from a Git mirror), use a Git source with a tag: `git::https://github.com/i386dev/terraform-cloudflare-easy-dns.git?ref=v2.6.1` for v5, or with `//modules/dns/v4` before `?ref=` for v4.
 
 ### HCL or YAML
 
@@ -133,7 +133,7 @@ A zone with most of the features: the apex, nested names, aliases, CAA and a str
 
 ```hcl
 module "dns" {
-  source  = "NikitaPuglachenko/easy-dns/cloudflare"
+  source  = "i386dev/easy-dns/cloudflare"
   version = "~> 2.6"
 
   zone_id   = var.zone_id
@@ -202,7 +202,7 @@ module "dns" {
 }
 ```
 
-Complete runnable configurations are available in [`examples`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/examples): `v5` (records in HCL), `yaml` (records in a YAML file), `import` (adopting an existing zone) and `v4` (provider v4, for existing configurations).
+Complete runnable configurations are available in [`examples`](https://github.com/i386dev/terraform-cloudflare-easy-dns/tree/main/examples): `v5` (records in HCL), `yaml` (records in a YAML file), `import` (adopting an existing zone) and `v4` (provider v4, for existing configurations).
 
 ## Record Model
 
@@ -306,7 +306,7 @@ The `records` input is validated before any API call:
 
 Both wrappers take `zone_id`, `zone_name` (optional, looked up from `zone_id` when omitted), `records` and the [defaults](#defaults-comments-and-tags); the v5 wrapper also takes `import_existing`.
 
-The type of `records` is shown as `any`: Terraform silently drops unknown attributes when it converts a value to an object type, so the module accepts the value as is, rejects unknown attributes, and then converts it to the typed structure described in [Record Object Schema](#record-object-schema). The full reference of inputs, outputs, requirements and resources is generated from the code with [terraform-docs](https://terraform-docs.io): [`modules/dns/v4`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/modules/dns/v4), [`modules/dns/v5`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/modules/dns/v5). The inputs of the root module are also shown on the [Terraform Registry](https://registry.terraform.io/modules/NikitaPuglachenko/easy-dns/cloudflare/latest?tab=inputs).
+The type of `records` is shown as `any`: Terraform silently drops unknown attributes when it converts a value to an object type, so the module accepts the value as is, rejects unknown attributes, and then converts it to the typed structure described in [Record Object Schema](#record-object-schema). The full reference of inputs, outputs, requirements and resources is generated from the code with [terraform-docs](https://terraform-docs.io): [`modules/dns/v4`](https://github.com/i386dev/terraform-cloudflare-easy-dns/tree/main/modules/dns/v4), [`modules/dns/v5`](https://github.com/i386dev/terraform-cloudflare-easy-dns/tree/main/modules/dns/v5). The inputs of the root module are also shown on the [Terraform Registry](https://registry.terraform.io/modules/i386dev/easy-dns/cloudflare/latest?tab=inputs).
 
 ### Record Object Schema
 
@@ -337,7 +337,7 @@ Values that most records share can be set once for the module call, and overridd
 
 ```hcl
 module "dns" {
-  source  = "NikitaPuglachenko/easy-dns/cloudflare"
+  source  = "i386dev/easy-dns/cloudflare"
   version = "~> 2.6"
 
   zone_id         = var.zone_id
@@ -376,7 +376,7 @@ records = yamldecode(file("${path.module}/records.easy-dns.yaml")).records
 
 `schema/records.schema.json` is a JSON Schema for such a file (a document with a `records` key). Editors use it for completion of record types, attributes and `data` fields, and highlight mistakes such as `proxid`, `ttl: 5m` or a CAA `tag` that does not exist before `terraform plan`:
 
-The schema URL of this version is [`https://raw.githubusercontent.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/v2.6.0/schema/records.schema.json`](https://raw.githubusercontent.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/v2.6.0/schema/records.schema.json).
+The schema URL of this version is [`https://raw.githubusercontent.com/i386dev/terraform-cloudflare-easy-dns/v2.6.1/schema/records.schema.json`](https://raw.githubusercontent.com/i386dev/terraform-cloudflare-easy-dns/v2.6.1/schema/records.schema.json).
 
 Name the files `*.easy-dns.yaml` (e.g. `records.easy-dns.yaml`) and map this pattern to the schema once:
 
@@ -393,7 +393,7 @@ Alternatively, a comment at the top of a file links the schema regardless of its
 # yaml-language-server: $schema=<schema URL>
 ```
 
-See [`examples/yaml`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/examples/yaml).
+See [`examples/yaml`](https://github.com/i386dev/terraform-cloudflare-easy-dns/tree/main/examples/yaml).
 
 Use the schema of the module version you use. For records written in HCL, there is no such completion (see [HCL or YAML](#hcl-or-yaml)); mistakes are reported at `plan`.
 
@@ -457,7 +457,7 @@ A service advertised with SRV:
 
 ## Importing Existing Records
 
-When the zone already has records, the first `apply` would fail with "record already exists" for each of them. With provider v5 (the root module or the `v5` submodule), the module can find the existing records and adopt them into the state instead. It works the same with records in HCL or in YAML; see [`examples/import`](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/tree/main/examples/import).
+When the zone already has records, the first `apply` would fail with "record already exists" for each of them. With provider v5 (the root module or the `v5` submodule), the module can find the existing records and adopt them into the state instead. It works the same with records in HCL or in YAML; see [`examples/import`](https://github.com/i386dev/terraform-cloudflare-easy-dns/tree/main/examples/import).
 
 1. Set `import_existing = true`. The module then reads the records of the zone (the API token needs the `DNS Read` permission) and matches them to the configured records by name, type and value. The records are read with one request per record type of the configuration, which avoids a provider crash on zones with CAA records ([cloudflare/terraform-provider-cloudflare#7004](https://github.com/cloudflare/terraform-provider-cloudflare/issues/7004)).
 2. Add an `import` block next to the module call:
@@ -488,6 +488,8 @@ Do one step at a time, each with its own `terraform plan` and `apply`, and revie
 1. **From v1 to v2** (record keys): [v1 to v2](#from-v1-to-v2), staying on the submodule you already use. Targeting 2.6 or later, fix any [unknown attributes](#to-26-unknown-attributes) as part of this step.
 2. **From provider v4 to v5**, if you use the `v4` submodule: [provider v4 to v5](#from-provider-v4-to-v5).
 3. **To the root module**, optionally: [v5 submodule to the root module](#from-the-v5-submodule-to-the-root-module).
+
+Configurations using `source = "NikitaPuglachenko/easy-dns/cloudflare"` only change the `source`, see [the old Registry namespace](#from-the-old-registry-namespace).
 
 For example, a configuration on `//modules/dns/v5` of v1 does step 1 with `RESOURCE=cloudflare_dns_record` and may stay on the submodule. From 2.0–2.5, upgrading to 2.6 or later only needs the [unknown attributes](#to-26-unknown-attributes) fixed, if there are any.
 
@@ -527,9 +529,13 @@ The v5 wrapper contains a `moved` block from `cloudflare_record` to `cloudflare_
 3. Run `terraform init -upgrade` and `terraform plan`. The plan should only show moved resources, without destroying or creating records; provider v5 also plans a one-time in-place update of the moved records (e.g. CAA `flags` become numbers). Review it carefully before applying.
 4. Run `terraform apply`. Provider v5 (checked with 5.26) may report `Provider produced inconsistent result after apply` with `.modified_on` for some records: the timestamp in the migrated state has a different precision ([cloudflare/terraform-provider-cloudflare#7387](https://github.com/cloudflare/terraform-provider-cloudflare/issues/7387)). The records are updated anyway; run `terraform plan` again, it should show no changes.
 
+### From the Old Registry Namespace
+
+The module moved from `NikitaPuglachenko/easy-dns/cloudflare` to `i386dev/easy-dns/cloudflare`, and the repository to `github.com/i386dev/terraform-cloudflare-easy-dns` (the old repository URL redirects). The module is the same, so changing `source` does not change any addresses in the state: run `terraform init -upgrade`, and `terraform plan` shows no changes.
+
 ### From the v5 Submodule to the Root Module
 
-The root module wraps the v5 submodule, so its records have one more level in their address. When switching `source` from `NikitaPuglachenko/easy-dns/cloudflare//modules/dns/v5` (or a Git source with `//modules/dns/v5`) to the root module, add a `moved` block next to the module call, so the records are not recreated:
+The root module wraps the v5 submodule, so its records have one more level in their address. When switching `source` from `i386dev/easy-dns/cloudflare//modules/dns/v5` (or a Git source with `//modules/dns/v5`) to the root module, add a `moved` block next to the module call, so the records are not recreated:
 
 ```hcl
 moved {

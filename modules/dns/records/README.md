@@ -1,6 +1,6 @@
 # Records core
 
-Provider-agnostic core used by the `v4` and `v5` wrappers: validates the `records` input and flattens it into a map of records keyed by `<name> <TYPE> <value>`. It has no provider dependency and is not meant to be used directly. See the [main README](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns#readme) for the input format.
+Provider-agnostic core used by the `v4` and `v5` wrappers: validates the `records` input and flattens it into a map of records keyed by `<name> <TYPE> <value>`. It has no provider dependency and is not meant to be used directly. See the [main README](https://github.com/i386dev/terraform-cloudflare-easy-dns#readme) for the input format.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
