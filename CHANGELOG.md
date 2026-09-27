@@ -9,6 +9,7 @@ All notable changes to this project are documented in this file. The format is b
 ### Changed
 
 - The repository moved to [i386dev/terraform-cloudflare-easy-dns](https://github.com/i386dev/terraform-cloudflare-easy-dns) and the module to the Registry source `i386dev/easy-dns/cloudflare`; the README, examples, badges and the schema `$id` use the new addresses, and the README describes switching `source` from `NikitaPuglachenko/easy-dns/cloudflare`
+- CI runs the gitleaks CLI instead of the gitleaks action, which requires a license for organizations
 
 ## [2.6.0] - 2026-09-26
 
