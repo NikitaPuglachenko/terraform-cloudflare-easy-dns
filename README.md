@@ -4,6 +4,8 @@
 
 A flexible Terraform module to manage Cloudflare DNS records using a structured object-based approach. Instead of defining multiple record resources, you can define your entire DNS zone (or sub-sections of it) in a single hierarchical map.
 
+> **Terraform Registry:** after the move to the `i386dev` organization, the module is being republished as `i386dev/easy-dns/cloudflare` and cannot be downloaded from the Registry yet. Until then, set `source` to `git::https://github.com/i386dev/terraform-cloudflare-easy-dns.git?ref=v2.6.2` (for provider v4, add `//modules/dns/v4` before `?ref=`) and remove `version`. The module and its inputs are the same as with the Registry source.
+
 ## How It Works in 30 Seconds
 
 The zone is described as one map, grouped by name and then by record type:
@@ -116,7 +118,7 @@ The module is published on the [Terraform Registry](https://registry.terraform.i
 | v5 | `i386dev/easy-dns/cloudflare` |
 | v4 | `i386dev/easy-dns/cloudflare//modules/dns/v4` |
 
-Without the Registry (e.g. from a Git mirror), use a Git source with a tag: `git::https://github.com/i386dev/terraform-cloudflare-easy-dns.git?ref=v2.6.1` for v5, or with `//modules/dns/v4` before `?ref=` for v4.
+Without the Registry (e.g. from a Git mirror), use a Git source with a tag: `git::https://github.com/i386dev/terraform-cloudflare-easy-dns.git?ref=v2.6.2` for v5, or with `//modules/dns/v4` before `?ref=` for v4.
 
 ### HCL or YAML
 
@@ -376,7 +378,7 @@ records = yamldecode(file("${path.module}/records.easy-dns.yaml")).records
 
 `schema/records.schema.json` is a JSON Schema for such a file (a document with a `records` key). Editors use it for completion of record types, attributes and `data` fields, and highlight mistakes such as `proxid`, `ttl: 5m` or a CAA `tag` that does not exist before `terraform plan`:
 
-The schema URL of this version is [`https://raw.githubusercontent.com/i386dev/terraform-cloudflare-easy-dns/v2.6.1/schema/records.schema.json`](https://raw.githubusercontent.com/i386dev/terraform-cloudflare-easy-dns/v2.6.1/schema/records.schema.json).
+The schema URL of this version is [`https://raw.githubusercontent.com/i386dev/terraform-cloudflare-easy-dns/v2.6.2/schema/records.schema.json`](https://raw.githubusercontent.com/i386dev/terraform-cloudflare-easy-dns/v2.6.2/schema/records.schema.json).
 
 Name the files `*.easy-dns.yaml` (e.g. `records.easy-dns.yaml`) and map this pattern to the schema once:
 
