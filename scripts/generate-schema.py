@@ -153,7 +153,7 @@ def schema():
     }
     return {
         "$schema": "http://json-schema.org/draft-07/schema#",
-        "$id": "https://raw.githubusercontent.com/NikitaPuglachenko/terraform-cloudflare-easy-dns/main/schema/records.schema.json",
+        "$id": "https://raw.githubusercontent.com/i386dev/terraform-cloudflare-easy-dns/main/schema/records.schema.json",
         "title": "easy-dns records",
         "description": "DNS records of the easy-dns Terraform module: a document with a records key, as passed through yamldecode",
         "type": "object",

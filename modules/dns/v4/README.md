@@ -1,6 +1,6 @@
 # DNS records for Cloudflare provider v4
 
-Manages DNS records with `cloudflare_record`. See the [main README](https://github.com/NikitaPuglachenko/terraform-cloudflare-easy-dns#readme) for usage, record types, keys and migration.
+Manages DNS records with `cloudflare_record`. See the [main README](https://github.com/i386dev/terraform-cloudflare-easy-dns#readme) for usage, record types, keys and migration.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
