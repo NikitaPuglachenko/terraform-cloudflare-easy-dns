@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.6.2] - 2026-09-27
+
+### Changed
+
+- README: a note that the module cannot be downloaded from the Terraform Registry as `i386dev/easy-dns/cloudflare` yet, with the Git source to use until it is republished
+
 ## [2.6.1] - 2026-09-27
 
 ### Changed
