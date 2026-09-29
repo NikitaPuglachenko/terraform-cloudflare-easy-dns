@@ -1,9 +1,8 @@
 # Records kept in a YAML file. Files named *.easy-dns.yaml can be mapped to the JSON
 # Schema of the module in editors, for completion and validation (see the README).
 module "dns" {
-  # Outside of this repository use the Terraform Registry:
-  #   source  = "i386dev/easy-dns/cloudflare"
-  #   version = "~> 2.6"
+  # Outside of this repository, with a local copy of the module (see the README):
+  #   source = "./modules/easy-dns"
   source = "../.."
 
   zone_id         = var.zone_id

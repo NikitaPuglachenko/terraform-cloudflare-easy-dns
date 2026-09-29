@@ -4,6 +4,20 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.6.3] - 2026-09-29
+
+### Added
+
+- Releases include an archive of the module (`terraform-cloudflare-easy-dns-<version>.tar.gz`, with a `VERSION` file) and `SHA256SUMS`, to keep a local copy of the module in a configuration
+
+### Changed
+
+- The module is not published on the Terraform Registry: the README describes a local copy of the module (without GitHub or the Registry on `terraform init`) and a Git source, and how to switch from the Registry source; the examples, the YAML schema setup (a local schema file) and the upgrade guide follow this
+
+### Removed
+
+- The Terraform Registry badge and the temporary Registry note
+
 ## [2.6.2] - 2026-09-27
 
 ### Changed
@@ -158,7 +172,10 @@ All notable changes to this project are documented in this file. The format is b
 - Inline aliases pointed to a relative name instead of the full hostname
 - Zone apex (`@`) handling for aliases and nested names
 
-[Unreleased]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.0...HEAD
+[Unreleased]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.3...HEAD
+[2.6.3]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.2...v2.6.3
+[2.6.2]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.1...v2.6.2
+[2.6.1]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.0...v2.6.1
 [2.6.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.5.3...v2.6.0
 [2.5.3]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.5.2...v2.5.3
 [2.5.2]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.5.1...v2.5.2
