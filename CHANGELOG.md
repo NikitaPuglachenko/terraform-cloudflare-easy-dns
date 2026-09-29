@@ -172,7 +172,10 @@ All notable changes to this project are documented in this file. The format is b
 - Inline aliases pointed to a relative name instead of the full hostname
 - Zone apex (`@`) handling for aliases and nested names
 
-[Unreleased]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.0...HEAD
+[Unreleased]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.3...HEAD
+[2.6.3]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.2...v2.6.3
+[2.6.2]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.1...v2.6.2
+[2.6.1]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.0...v2.6.1
 [2.6.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.5.3...v2.6.0
 [2.5.3]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.5.2...v2.5.3
 [2.5.2]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.5.1...v2.5.2
