@@ -16,7 +16,7 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Removed
 
-- The Terraform Registry badge, the temporary Registry note and the `.terraform-registry` ownership file
+- The Terraform Registry badge and the temporary Registry note
 
 ## [2.6.2] - 2026-09-27
 
