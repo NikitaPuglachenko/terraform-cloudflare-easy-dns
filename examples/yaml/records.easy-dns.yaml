@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=../../schema/records.schema.json
-# The comment above links the schema of this repository; outside of it, map
-# *.easy-dns.yaml to the schema URL of the module version in the editor settings.
+# The comment above links the schema of this repository; with a local copy of the
+# module, map *.easy-dns.yaml to modules/easy-dns/schema/records.schema.json.
 
 records:
   # Zone apex (example.com): website behind the proxy and mail

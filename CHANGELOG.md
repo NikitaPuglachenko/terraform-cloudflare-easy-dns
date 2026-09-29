@@ -4,6 +4,20 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-09-29
+
+### Added
+
+- Releases include an archive of the module (`terraform-cloudflare-easy-dns-<version>.tar.gz`, with a `VERSION` file) and `SHA256SUMS`, to keep a local copy of the module in a configuration
+
+### Changed
+
+- The module is not published on the Terraform Registry: the README describes a local copy of the module (without GitHub or the Registry on `terraform init`) and a Git source, and how to switch from the Registry source; the examples, the YAML schema setup (a local schema file) and the upgrade guide follow this
+
+### Removed
+
+- The Terraform Registry badge, the temporary Registry note and the `.terraform-registry` ownership file
+
 ## [2.6.2] - 2026-09-27
 
 ### Changed
