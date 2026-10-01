@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.6.4] - 2026-10-01
+
 ### Fixed
 
 - Import matching with `import_existing` no longer drops quotes inside TXT values or compares every `data` field case-insensitively, which could match a different existing record (a TXT value differing only in inner quotes, a NAPTR `regex` or a public key differing in case); hostnames and hex values are still compared case-insensitively
@@ -181,7 +183,8 @@ All notable changes to this project are documented in this file. The format is b
 - Inline aliases pointed to a relative name instead of the full hostname
 - Zone apex (`@`) handling for aliases and nested names
 
-[Unreleased]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.3...HEAD
+[Unreleased]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.4...HEAD
+[2.6.4]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.3...v2.6.4
 [2.6.3]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.2...v2.6.3
 [2.6.2]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.1...v2.6.2
 [2.6.1]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.0...v2.6.1

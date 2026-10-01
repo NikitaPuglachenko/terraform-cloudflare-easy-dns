@@ -117,7 +117,7 @@ A copy in your repository needs neither GitHub nor the Terraform Registry to get
 
 ```sh
 REPO=https://github.com/i386dev/terraform-cloudflare-easy-dns
-VERSION=v2.6.3
+VERSION=v2.6.4
 ARCHIVE="terraform-cloudflare-easy-dns-${VERSION}.tar.gz"
 curl -fsSL -O "${REPO}/releases/download/${VERSION}/${ARCHIVE}"
 curl -fsSL -O "${REPO}/releases/download/${VERSION}/SHA256SUMS"
@@ -140,7 +140,7 @@ Keep the whole directory: the wrappers use the shared core module through a rela
 To fetch the module on `terraform init` instead, use a Git source with a tag (or the URL of your own mirror):
 
 ```hcl
-source = "git::https://github.com/i386dev/terraform-cloudflare-easy-dns.git?ref=v2.6.3"
+source = "git::https://github.com/i386dev/terraform-cloudflare-easy-dns.git?ref=v2.6.4"
 ```
 
 For provider v4, add `//modules/dns/v4` before `?ref=`.
