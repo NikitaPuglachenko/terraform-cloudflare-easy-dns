@@ -326,6 +326,7 @@ The `records` input is validated before any API call:
 - `CAA` records require `tag`: `issue`, `issuewild` or `iodef`
 - `key` must not contain whitespace
 - Record keys must be unique. The error shows where each duplicate is defined, e.g. `"_acme-challenge.app TXT 79bead8e6d65" from records["_acme-challenge.app"]["TXT"][0] and records["app"]["_acme-challenge.TXT"][0]`
+- The same record must not be written twice with different name forms (`www` and `www.example.com`, `@` and the zone name), which would give it two keys; addresses and hostnames (`A`, `AAAA`, `MX`, `NS`, `PTR`) are compared case-insensitively and without a trailing dot
 - A `CNAME` (including `ALIASES`) cannot share its name with other records, except at the zone apex (`@` or the zone name) where Cloudflare uses CNAME flattening, and a name has at most one `CNAME`, also with different `key`s. Names are compared fully qualified, so `www` and `www.example.com` are the same name
 
 ## Inputs

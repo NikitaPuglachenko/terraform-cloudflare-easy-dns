@@ -468,3 +468,58 @@ run "cname_at_apex_by_zone_name" {
     error_message = "The zone name is the apex, where a CNAME may sit next to other records"
   }
 }
+
+run "duplicate_across_name_forms" {
+  command = plan
+
+  variables {
+    records = {
+      "www"             = { A = [{ content = "192.0.2.1" }] }
+      "www.example.com" = { A = [{ content = "192.0.2.1" }] }
+    }
+  }
+
+  expect_failures = [output.flat_records]
+}
+
+run "duplicate_apex_by_zone_name" {
+  command = plan
+
+  variables {
+    records = {
+      "@"           = { TXT = [{ content = "v=spf1 -all" }] }
+      "example.com" = { TXT = [{ content = "v=spf1 -all" }] }
+    }
+  }
+
+  expect_failures = [output.flat_records]
+}
+
+run "duplicate_hostname_case_and_dot" {
+  command = plan
+
+  variables {
+    records = {
+      "@"           = { MX = [{ content = "mail.example.com", priority = 10 }] }
+      "example.com" = { MX = [{ content = "Mail.Example.com.", priority = 10 }] }
+    }
+  }
+
+  expect_failures = [output.flat_records]
+}
+
+run "same_name_forms_different_records" {
+  command = plan
+
+  variables {
+    records = {
+      "www"             = { A = [{ content = "192.0.2.1" }, { content = "192.0.2.3", key = "Main" }] }
+      "www.example.com" = { A = [{ content = "192.0.2.2" }, { content = "192.0.2.4", key = "main" }] }
+    }
+  }
+
+  assert {
+    condition     = length(output.flat_records) == 4
+    error_message = "Different values or different explicit keys on one name are not duplicates"
+  }
+}
