@@ -61,3 +61,77 @@ run "no_existing_records" {
     error_message = "No import IDs without existing records"
   }
 }
+
+run "import_txt_quotes_inside_the_value" {
+  command = plan
+
+  variables {
+    records = {
+      "@" = {
+        TXT = [
+          { content = "v=spf1 \"a\" -all" },
+          { content = "plain value", key = "plain" },
+        ]
+      }
+    }
+    existing_records = [
+      # Same text with the inner quotes dropped: a different value
+      { id = "id-inner", name = "example.com", type = "TXT", content = "\"v=spf1 a -all\"" },
+      # Only the surrounding quotes differ: the same value
+      { id = "id-plain", name = "example.com", type = "TXT", content = "\"plain value\"" },
+    ]
+  }
+
+  assert {
+    condition     = output.import_record_ids == { "@ TXT plain" = "id-plain" }
+    error_message = "Quotes inside a TXT value must count, surrounding quotes must not"
+  }
+}
+
+run "import_structured_fields_case" {
+  command = plan
+
+  variables {
+    records = {
+      "_sip._udp" = {
+        NAPTR = [{
+          key  = "naptr"
+          data = { order = 10, preference = 10, flags = "S", service = "SIP+D2U", regex = "!^.*$!sip:Info@example.com!", replacement = "_sip._udp.example.com" }
+        }]
+      }
+    }
+    existing_records = [
+      # The hostname differs in case and by a trailing dot only: the same record
+      { id = "id-naptr", name = "_sip._udp.example.com", type = "NAPTR", data = { order = "10", preference = "10", flags = "S", service = "SIP+D2U", regex = "!^.*$!sip:Info@example.com!", replacement = "_SIP._udp.Example.com." } },
+    ]
+  }
+
+  assert {
+    condition     = output.import_record_ids == { "_sip._udp NAPTR naptr" = "id-naptr" }
+    error_message = "Hostname fields must be compared case-insensitively"
+  }
+}
+
+run "import_structured_fields_exact" {
+  command = plan
+
+  variables {
+    records = {
+      "_sip._udp" = {
+        NAPTR = [{
+          key  = "naptr"
+          data = { order = 10, preference = 10, flags = "S", service = "SIP+D2U", regex = "!^.*$!sip:Info@example.com!", replacement = "_sip._udp.example.com" }
+        }]
+      }
+    }
+    existing_records = [
+      # The regex differs in case: a different record
+      { id = "id-naptr", name = "_sip._udp.example.com", type = "NAPTR", data = { order = "10", preference = "10", flags = "S", service = "SIP+D2U", regex = "!^.*$!sip:info@example.com!", replacement = "_sip._udp.example.com" } },
+    ]
+  }
+
+  assert {
+    condition     = output.import_record_ids == {}
+    error_message = "Fields other than hostnames and hex values must match exactly"
+  }
+}

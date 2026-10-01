@@ -87,11 +87,21 @@ locals {
     if length(group) > 1
   ]
 
-  # A CNAME cannot share its name with other records, except at the zone apex (CNAME flattening)
-  by_name = { for r in local.records : lower(r.name) => r... }
+  # A CNAME cannot share its name with other records, except at the zone apex (CNAME
+  # flattening), and a name has at most one CNAME, whatever keys the records have.
+  # Names are grouped fully qualified, so "@" and the zone name, or "www" and
+  # "www.example.com", are the same name.
+  by_name = {
+    for r in local.records : (
+      lower(trimsuffix(r.name, ".")) == "@" ? lower(var.root_domain) :
+      lower(trimsuffix(r.name, ".")) == lower(var.root_domain) || endswith(lower(trimsuffix(r.name, ".")), ".${lower(var.root_domain)}") ? lower(trimsuffix(r.name, ".")) :
+      "${lower(trimsuffix(r.name, "."))}.${lower(var.root_domain)}"
+    ) => r...
+  }
   cname_conflicts = [
     for name, group in local.by_name : "\"${name}\": ${join(", ", [for r in group : "${r.type} from ${r.source}"])}"
-    if name != "@" && anytrue([for r in group : r.type == "CNAME"]) && anytrue([for r in group : r.type != "CNAME"])
+    if length([for r in group : r if r.type == "CNAME"]) > 1
+    || (name != lower(var.root_domain) && anytrue([for r in group : r.type == "CNAME"]) && anytrue([for r in group : r.type != "CNAME"]))
   ]
 
   flat_records = {

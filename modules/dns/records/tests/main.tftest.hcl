@@ -420,3 +420,51 @@ run "valid_names" {
     error_message = "Wildcards, underscores, hyphens and IPv6 must be accepted"
   }
 }
+
+run "two_cnames_with_keys" {
+  command = plan
+
+  variables {
+    records = {
+      "app" = {
+        CNAME = [
+          { content = "a.example.net", key = "a" },
+          { content = "b.example.net", key = "b" },
+        ]
+      }
+    }
+  }
+
+  expect_failures = [output.flat_records]
+}
+
+run "cname_conflict_across_name_forms" {
+  command = plan
+
+  variables {
+    records = {
+      "www"             = { CNAME = [{ content = "target.example.net" }] }
+      "www.example.com" = { TXT = [{ content = "v=spf1 -all" }] }
+    }
+  }
+
+  expect_failures = [output.flat_records]
+}
+
+run "cname_at_apex_by_zone_name" {
+  command = plan
+
+  variables {
+    records = {
+      "example.com" = {
+        CNAME = [{ content = "target.example.net" }]
+        TXT   = [{ content = "v=spf1 -all" }]
+      }
+    }
+  }
+
+  assert {
+    condition     = length(output.flat_records) == 2
+    error_message = "The zone name is the apex, where a CNAME may sit next to other records"
+  }
+}
