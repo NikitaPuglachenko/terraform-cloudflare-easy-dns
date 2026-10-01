@@ -32,6 +32,13 @@ variable "default_tags" {
   default     = []
 }
 
+variable "allowed_cname_conflicts" {
+  description = "Names where a CNAME may share its name with other records, for existing zones that have such names (Cloudflare accepts them for records that are not proxied). Compared fully qualified and case-insensitively; a second CNAME on a name still fails"
+  type        = list(string)
+  default     = []
+  nullable    = false
+}
+
 variable "records" {
   description = "DNS records grouped by base name (subdomain or @ for apex), then by record type"
   type = map(
@@ -57,7 +64,7 @@ variable "records" {
           comment = optional(string)
           tags    = optional(list(string))
 
-          # Record settings, provider v5 only (ignored by the v4 wrapper)
+          # Record settings (Cloudflare provider v5)
           settings = optional(object({
             flatten_cname = optional(bool)
             ipv4_only     = optional(bool)

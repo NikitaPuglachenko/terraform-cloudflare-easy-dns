@@ -84,7 +84,8 @@ Everything else (all record types, defaults, import of existing records, validat
 modules/dns/
 ├── records/   # Provider-agnostic core: validation and flattening (internal)
 ├── v4/        # Wrapper for Cloudflare provider v4 (cloudflare_record)
-└── v5/        # Wrapper for Cloudflare provider v5 (cloudflare_dns_record)
+└── v5/        # Wrapper for Cloudflare provider v5 (cloudflare_dns_record);
+               # migrate-from-v4.tf moves the state of the v4 wrapper
 examples/
 ├── v5/        # Records in HCL
 ├── yaml/      # Records in a YAML file, validated by the JSON Schema
@@ -117,7 +118,7 @@ A copy in your repository needs neither GitHub nor the Terraform Registry to get
 
 ```sh
 REPO=https://github.com/i386dev/terraform-cloudflare-easy-dns
-VERSION=v2.6.4
+VERSION=v2.7.0
 ARCHIVE="terraform-cloudflare-easy-dns-${VERSION}.tar.gz"
 curl -fsSL -O "${REPO}/releases/download/${VERSION}/${ARCHIVE}"
 curl -fsSL -O "${REPO}/releases/download/${VERSION}/SHA256SUMS"
@@ -133,14 +134,24 @@ Commit `modules/easy-dns` together with your configuration and use it as a local
 | v5 | `./modules/easy-dns` |
 | v4 | `./modules/easy-dns/modules/dns/v4` |
 
-Keep the whole directory: the wrappers use the shared core module through a relative path. The Cloudflare provider is still installed from the Terraform Registry on `terraform init`; for fully offline use, set up a provider mirror with `terraform providers mirror`. `modules/easy-dns/VERSION` shows the version of the copy; to upgrade, replace the directory with the archive of the new version and follow [Upgrading and Migration](#upgrading-and-migration).
+Keep the directory together: the wrappers use the shared core module through a relative path. The Cloudflare provider is still installed from the Terraform Registry on `terraform init`; for fully offline use, set up a provider mirror with `terraform providers mirror`. `modules/easy-dns/VERSION` shows the version of the copy; to upgrade, replace the directory with the archive of the new version and follow [Upgrading and Migration](#upgrading-and-migration).
+
+#### In a Larger Repository
+
+Each release also has a provider v5 archive, `terraform-cloudflare-easy-dns-v5-<version>.tar.gz` (in the same `SHA256SUMS`): the root module, `modules/dns/v5` and `modules/dns/records`, without the v4 wrapper and without `migrate-from-v4.tf`, the `moved` block for configurations that used the v4 wrapper. It is meant for repositories that pin provider v5 and run tools over every directory, where the v4 wrapper's `~> 4.41` would conflict. Updating such a copy is a plain replacement of the directory.
+
+What a copy may change without affecting the module:
+
+- `versions.tf` (root and `modules/dns/v5`) may be replaced by the repository's own pin, as long as it allows Terraform `>= 1.8.0` and the Cloudflare provider `>= 5.26` within v5
+- `schema/` is only needed for records in YAML, and the `README.md` files of the submodules are generated reference
+- With the full archive and no history on provider v4: `modules/dns/v4` and `modules/dns/v5/migrate-from-v4.tf` may be dropped, which gives the v5 archive
 
 ### Git Source
 
 To fetch the module on `terraform init` instead, use a Git source with a tag (or the URL of your own mirror):
 
 ```hcl
-source = "git::https://github.com/i386dev/terraform-cloudflare-easy-dns.git?ref=v2.6.4"
+source = "git::https://github.com/i386dev/terraform-cloudflare-easy-dns.git?ref=v2.7.0"
 ```
 
 For provider v4, add `//modules/dns/v4` before `?ref=`.
@@ -306,7 +317,16 @@ Since the value is a part of the key, changing it replaces the record. For value
 ]
 ```
 
-Two records that produce the same key (e.g. the same value listed twice, or a `CNAME` and an alias with the same name) fail at `plan` with the list of duplicates and where each of them is defined.
+Two records that produce the same key (e.g. the same value listed twice, or a `CNAME` and an alias with the same name) fail at `plan` with the list of duplicates and where each of them is defined. `MX` records that differ only in `priority` and `CAA` records that differ only in `flags` get the same key too, since neither is a part of it; give each of them a `key`:
+
+```hcl
+MX = [
+  { content = "mx.example.net", priority = 10, key = "primary" },
+  { content = "mx.example.net", priority = 20, key = "backup" },
+]
+```
+
+Names are sent to Cloudflare in lower case, as Cloudflare stores them; the key keeps the name as written (`M1._domainkey TXT dkim`).
 
 ## Validation
 
@@ -328,10 +348,15 @@ The `records` input is validated before any API call:
 - Record keys must be unique. The error shows where each duplicate is defined, e.g. `"_acme-challenge.app TXT 79bead8e6d65" from records["_acme-challenge.app"]["TXT"][0] and records["app"]["_acme-challenge.TXT"][0]`
 - The same record must not be written twice with different name forms (`www` and `www.example.com`, `@` and the zone name), which would give it two keys; addresses and hostnames (`A`, `AAAA`, `MX`, `NS`, `PTR`) are compared case-insensitively and without a trailing dot
 - A `CNAME` (including `ALIASES`) cannot share its name with other records, except at the zone apex (`@` or the zone name) where Cloudflare uses CNAME flattening, and a name has at most one `CNAME`, also with different `key`s. Names are compared fully qualified, so `www` and `www.example.com` are the same name
+- Existing zones may have names where a `CNAME` shares its name with other records, which Cloudflare accepts for records that are not proxied. Such names can be listed in `allowed_cname_conflicts` (compared fully qualified and case-insensitively), so the zone can be adopted without changing live DNS first. Only the listed names are exempt: a conflict on any other name still fails, a second `CNAME` on a listed name still fails, and a listed name that has no conflict anymore shows a warning so the list can shrink:
+
+  ```hcl
+  allowed_cname_conflicts = ["community", "*.legacy"]
+  ```
 
 ## Inputs
 
-Both wrappers take `zone_id`, `zone_name` (optional, looked up from `zone_id` when omitted), `records` and the [defaults](#defaults-comments-and-tags); the v5 wrapper also takes `import_existing`.
+Both wrappers take `zone_id`, `zone_name` (optional, looked up from `zone_id` when omitted), `records`, the [defaults](#defaults-comments-and-tags) and `allowed_cname_conflicts` (see [Validation](#validation)); the v5 wrapper also takes `import_existing`.
 
 The type of `records` is shown as `any`: Terraform silently drops unknown attributes when it converts a value to an object type, so the module accepts the value as is, rejects unknown attributes, and then converts it to the typed structure described in [Record Object Schema](#record-object-schema). The full reference of inputs, outputs, requirements and resources is generated from the code with [terraform-docs](https://terraform-docs.io): [`modules/dns/v4`](https://github.com/i386dev/terraform-cloudflare-easy-dns/tree/main/modules/dns/v4), [`modules/dns/v5`](https://github.com/i386dev/terraform-cloudflare-easy-dns/tree/main/modules/dns/v5).
 
@@ -541,6 +566,10 @@ Version 2 changes the record keys in the state (see [Record Keys](#record-keys))
 
 3. Run `terraform plan`. It should only show records that have moved, with no records to add or destroy.
 4. Run `terraform apply`, then delete `dns_migration.tf`. The next `terraform plan` should show no changes.
+
+### To 2.7: Names in Lower Case
+
+Record names are sent in lower case, as Cloudflare stores them. With provider v5, a name written in another case (`M1._domainkey`) showed a change on every plan that `apply` did not settle; that diff is gone. With the v4 wrapper, such a record gets a one-time in-place update of its name. Keys keep the name as written, so no state address changes.
 
 ### To 2.6: Unknown Attributes
 

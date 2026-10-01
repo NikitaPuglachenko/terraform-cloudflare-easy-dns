@@ -4,6 +4,23 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-10-01
+
+### Added
+
+- `allowed_cname_conflicts` input (root module, both wrappers): names where a `CNAME` may share its name with other records, for existing zones where Cloudflare accepted it for records that are not proxied. Names are compared fully qualified and case-insensitively; only the listed names are exempt, a second `CNAME` on a name still fails, and a listed name without a conflict shows a warning
+- A provider v5 release archive, `terraform-cloudflare-easy-dns-v5-<version>.tar.gz`: the root module, `modules/dns/v5` and `modules/dns/records`, without the v4 wrapper and its migration `moved` block, for copies in repositories that pin provider v5
+- README: what a copy in a larger repository may replace or drop
+
+### Fixed
+
+- Record names are sent in lower case, as Cloudflare stores them: with provider v5, a name in another case showed a change on every plan. Keys keep the name as written, so no state address changes; with the v4 wrapper, such a record gets a one-time in-place update of its name
+
+### Changed
+
+- The duplicate error explains that `MX` records differing only in priority and `CAA` records differing only in flags need a `key`; the CNAME error points to `allowed_cname_conflicts`
+- The `moved` block from the v4 wrapper is in `modules/dns/v5/migrate-from-v4.tf`, so a v5-only copy can leave it out
+
 ## [2.6.4] - 2026-10-01
 
 ### Fixed
@@ -183,7 +200,8 @@ All notable changes to this project are documented in this file. The format is b
 - Inline aliases pointed to a relative name instead of the full hostname
 - Zone apex (`@`) handling for aliases and nested names
 
-[Unreleased]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.4...HEAD
+[Unreleased]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.7.0...HEAD
+[2.7.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.4...v2.7.0
 [2.6.4]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.3...v2.6.4
 [2.6.3]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.2...v2.6.3
 [2.6.2]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.1...v2.6.2

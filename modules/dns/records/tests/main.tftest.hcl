@@ -523,3 +523,146 @@ run "same_name_forms_different_records" {
     error_message = "Different values or different explicit keys on one name are not duplicates"
   }
 }
+
+run "allowed_cname_conflict_listed" {
+  command = plan
+
+  variables {
+    records = {
+      "community" = {
+        CNAME = [{ content = "forum.example.net" }]
+        MX    = [{ content = "mx.example.net", priority = 10 }]
+      }
+      "*.legacy" = {
+        CNAME = [{ content = "legacy.example.net" }]
+        TXT   = [{ content = "v=spf1 -all" }]
+      }
+    }
+    # Another case and the fully qualified form name the same records
+    allowed_cname_conflicts = ["Community", "*.legacy.example.com"]
+  }
+
+  assert {
+    condition     = length(output.flat_records) == 4
+    error_message = "Listed names may have a CNAME next to other records"
+  }
+}
+
+run "cname_conflict_not_listed" {
+  command = plan
+
+  variables {
+    records = {
+      "community" = {
+        CNAME = [{ content = "forum.example.net" }]
+        MX    = [{ content = "mx.example.net", priority = 10 }]
+      }
+      "shop" = {
+        CNAME = [{ content = "shop.example.net" }]
+        TXT   = [{ content = "v=spf1 -all" }]
+      }
+    }
+    allowed_cname_conflicts = ["community"]
+  }
+
+  expect_failures = [output.flat_records]
+}
+
+run "cname_conflict_empty_list" {
+  command = plan
+
+  variables {
+    records = {
+      "community" = {
+        CNAME = [{ content = "forum.example.net" }]
+        MX    = [{ content = "mx.example.net", priority = 10 }]
+      }
+    }
+    allowed_cname_conflicts = []
+  }
+
+  expect_failures = [output.flat_records]
+}
+
+run "two_cnames_on_a_listed_name" {
+  command = plan
+
+  variables {
+    records = {
+      "community" = {
+        CNAME = [
+          { content = "a.example.net", key = "a" },
+          { content = "b.example.net", key = "b" },
+        ]
+        MX = [{ content = "mx.example.net", priority = 10 }]
+      }
+    }
+    allowed_cname_conflicts = ["community"]
+  }
+
+  expect_failures = [output.flat_records]
+}
+
+run "allowed_cname_conflict_unused" {
+  command = plan
+
+  variables {
+    records = {
+      "community" = { CNAME = [{ content = "forum.example.net" }] }
+    }
+    allowed_cname_conflicts = ["community"]
+  }
+
+  expect_failures = [check.allowed_cname_conflicts_in_use]
+}
+
+run "names_in_lower_case" {
+  command = plan
+
+  variables {
+    records = {
+      "M1._domainkey" = { TXT = [{ content = "k=rsa; p=abc", key = "dkim" }] }
+      "App"           = { "_X.TXT" = [{ content = "token", key = "x" }] }
+    }
+  }
+
+  assert {
+    condition = (
+      output.flat_records["M1._domainkey TXT dkim"].name == "m1._domainkey"
+      && output.flat_records["_X.App TXT x"].name == "_x.app"
+    )
+    error_message = "Names must be sent in lower case while keys keep the name as written"
+  }
+}
+
+run "mx_differing_only_in_priority" {
+  command = plan
+
+  variables {
+    records = {
+      "@" = { MX = [{ content = "mx.example.net", priority = 10 }, { content = "mx.example.net", priority = 20 }] }
+    }
+  }
+
+  expect_failures = [output.flat_records]
+}
+
+run "mx_differing_only_in_priority_with_keys" {
+  command = plan
+
+  variables {
+    records = {
+      "@" = {
+        MX = [
+          { content = "mx.example.net", priority = 10, key = "primary" },
+          { content = "mx.example.net", priority = 20, key = "backup" },
+        ]
+      }
+    }
+  }
+
+  assert {
+    condition     = length(output.flat_records) == 2
+    error_message = "MX records differing only in priority are accepted with keys"
+  }
+}

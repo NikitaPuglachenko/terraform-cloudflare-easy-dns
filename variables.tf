@@ -85,3 +85,10 @@ variable "default_tags" {
   type        = list(string)
   default     = []
 }
+
+variable "allowed_cname_conflicts" {
+  description = "Names where a CNAME already shares its name with other records in the zone, e.g. [\"community\", \"*.legacy.example.com\"]. Cloudflare accepts this for records that are not proxied, and older zones often have such names; only the listed names are exempt from the CNAME check. Compared fully qualified and case-insensitively; a second CNAME on a name still fails, and listed names without a conflict show a warning"
+  type        = list(string)
+  default     = []
+  nullable    = false
+}

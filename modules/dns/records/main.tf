@@ -40,6 +40,17 @@ locals {
     }
   ]
 
+  # Fully qualified, lower-case names, so "@" and the zone name, or "www" and
+  # "www.example.com", are the same name; for record names and for the names in
+  # allowed_cname_conflicts
+  fqdn = {
+    for n in distinct(concat([for r in local.resolved : r.name], var.allowed_cname_conflicts)) : n => (
+      lower(trimsuffix(n, ".")) == "@" ? lower(var.root_domain) :
+      lower(trimsuffix(n, ".")) == lower(var.root_domain) || endswith(lower(trimsuffix(n, ".")), ".${lower(var.root_domain)}") ? lower(trimsuffix(n, ".")) :
+      "${lower(trimsuffix(n, "."))}.${lower(var.root_domain)}"
+    )
+  }
+
   # Keys follow the zone file format: "<name> <TYPE> <value>"
   keyed = [
     for r in local.resolved : merge(r, {
@@ -60,13 +71,7 @@ locals {
       old_key = r.old_key
       source  = r.source
       name    = r.name
-      # Fully qualified, so "@" and the zone name, or "www" and "www.example.com",
-      # are the same name
-      fqdn = (
-        lower(trimsuffix(r.name, ".")) == "@" ? lower(var.root_domain) :
-        lower(trimsuffix(r.name, ".")) == lower(var.root_domain) || endswith(lower(trimsuffix(r.name, ".")), ".${lower(var.root_domain)}") ? lower(trimsuffix(r.name, ".")) :
-        "${lower(trimsuffix(r.name, "."))}.${lower(var.root_domain)}"
-      )
+      fqdn    = local.fqdn[r.name]
       # The key without its name part, normalized like DNS compares it: addresses
       # and hostnames case-insensitively and without a trailing dot
       key_value = (
@@ -119,19 +124,28 @@ locals {
   )
 
   # A CNAME cannot share its name with other records, except at the zone apex (CNAME
-  # flattening), and a name has at most one CNAME, whatever keys the records have.
-  # Names are grouped fully qualified, so "@" and the zone name, or "www" and
-  # "www.example.com", are the same name.
+  # flattening) and on names listed in allowed_cname_conflicts (existing zones,
+  # where Cloudflare accepted it for records that are not proxied). A name never
+  # has more than one CNAME, whatever keys the records have. Names are grouped
+  # fully qualified.
   by_name = { for r in local.records : r.fqdn => r... }
+  cname_shared = [
+    for name, group in local.by_name : name
+    if name != lower(var.root_domain) && anytrue([for r in group : r.type == "CNAME"]) && anytrue([for r in group : r.type != "CNAME"])
+  ]
+  allowed_cname_conflicts = distinct([for n in var.allowed_cname_conflicts : local.fqdn[n]])
   cname_conflicts = [
     for name, group in local.by_name : "\"${name}\": ${join(", ", [for r in group : "${r.type} from ${r.source}"])}"
     if length([for r in group : r if r.type == "CNAME"]) > 1
-    || (name != lower(var.root_domain) && anytrue([for r in group : r.type == "CNAME"]) && anytrue([for r in group : r.type != "CNAME"]))
+    || (contains(local.cname_shared, name) && !contains(local.allowed_cname_conflicts, name))
   ]
+  # Listed names that no longer have a conflict, so the list does not keep growing
+  unused_allowed_cname_conflicts = [for n in local.allowed_cname_conflicts : n if !contains(local.cname_shared, n)]
 
   flat_records = {
     for key, group in local.grouped : key => {
-      name     = group[0].name
+      # Cloudflare stores names in lower case; the key keeps the name as written
+      name     = lower(group[0].name)
       type     = group[0].type
       content  = group[0].content
       ttl      = group[0].ttl
@@ -146,5 +160,12 @@ locals {
 
   state_migration = {
     for r in local.records : r.old_key => r.key if r.old_key != r.key
+  }
+}
+
+check "allowed_cname_conflicts_in_use" {
+  assert {
+    condition     = length(local.unused_allowed_cname_conflicts) == 0
+    error_message = "allowed_cname_conflicts lists names without a CNAME conflict, which can be removed: ${join(", ", local.unused_allowed_cname_conflicts)}"
   }
 }
