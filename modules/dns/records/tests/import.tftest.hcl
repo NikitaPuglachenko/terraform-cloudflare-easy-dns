@@ -135,3 +135,53 @@ run "import_structured_fields_exact" {
     error_message = "Fields other than hostnames and hex values must match exactly"
   }
 }
+
+run "import_caa_issuer_case" {
+  command = plan
+
+  variables {
+    records = {
+      "@" = {
+        CAA = [
+          { content = "LetsEncrypt.org", tag = "issue" },
+          { content = "pki.goog; accounturi=https://example.net/Acct/1", tag = "issuewild" },
+          { content = "mailto:Ops@example.com", tag = "iodef" },
+        ]
+      }
+    }
+    existing_records = [
+      # The issuer domain differs in case: the same record
+      { id = "id-issue", name = "example.com", type = "CAA", data = { flags = "0", tag = "issue", value = "letsencrypt.org" } },
+      # The account URI parameter differs in case: a different record
+      { id = "id-wild", name = "example.com", type = "CAA", data = { flags = "0", tag = "issuewild", value = "PKI.goog; accounturi=https://example.net/acct/1" } },
+      # iodef is a URL, compared exactly
+      { id = "id-iodef", name = "example.com", type = "CAA", data = { flags = "0", tag = "iodef", value = "mailto:ops@example.com" } },
+    ]
+  }
+
+  assert {
+    condition     = output.import_record_ids == { "@ CAA issue LetsEncrypt.org" = "id-issue" }
+    error_message = "CAA issuer domains must match case-insensitively, parameters and iodef exactly"
+  }
+}
+
+run "import_openpgpkey_exact" {
+  command = plan
+
+  variables {
+    records = {
+      "a._openpgpkey" = { OPENPGPKEY = [{ content = "mQENBAbc", key = "a" }] }
+      "b._openpgpkey" = { OPENPGPKEY = [{ content = "mQENBXyz", key = "b" }] }
+    }
+    existing_records = [
+      # base64 differing in case: a different key
+      { id = "id-a", name = "a._openpgpkey.example.com", type = "OPENPGPKEY", content = "MQENBABC" },
+      { id = "id-b", name = "b._openpgpkey.example.com", type = "OPENPGPKEY", content = "mQENBXyz" },
+    ]
+  }
+
+  assert {
+    condition     = output.import_record_ids == { "b._openpgpkey OPENPGPKEY b" = "id-b" }
+    error_message = "OPENPGPKEY content must be compared exactly"
+  }
+}
