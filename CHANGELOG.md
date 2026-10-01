@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Fixed
+
+- Import matching with `import_existing` no longer drops quotes inside TXT values or compares every `data` field case-insensitively, which could match a different existing record (a TXT value differing only in inner quotes, a NAPTR `regex` or a public key differing in case); hostnames and hex values are still compared case-insensitively
+- Two or more `CNAME`s on one name are rejected also when they have different `key`s
+- The CNAME checks compare names fully qualified: a `CNAME` on the zone name is accepted next to other records like one on `@`, and `www` and `www.example.com` are the same name
+
 ## [2.6.3] - 2026-09-29
 
 ### Added
