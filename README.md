@@ -502,7 +502,7 @@ When the zone already has records, the first `apply` would fail with "record alr
 
 For structured records (`SRV`, `HTTPS`, `TLSA`, ...), provider v5 plans a one-time in-place update right after the import, without visible changes; after the `apply`, the plan is empty.
 
-Matching ignores the case and a trailing dot of names, hostnames (`target`, `replacement`) and hex values (`digest`, `fingerprint`, and `certificate` of TLSA and SMIMEA records); other `data` fields must match exactly. TXT values are compared without the split into quoted chunks and without one pair of surrounding quotes; quotes inside the value count. A record is imported only when exactly one existing record matches it: when the zone has several identical records, the record is not imported and `plan` shows it as created, so the duplicates can be cleaned up first.
+Matching ignores the case and a trailing dot of names, hostnames (`target`, `replacement`, the issuer domain of CAA `issue`/`issuewild` values) and hex values (`digest`, `fingerprint`, and `certificate` of TLSA and SMIMEA records); other `data` fields, CAA parameters after `;`, `iodef` URLs and OPENPGPKEY keys must match exactly. TXT values are compared without the split into quoted chunks and without one pair of surrounding quotes; quotes inside the value count. A record is imported only when exactly one existing record matches it: when the zone has several identical records, the record is not imported and `plan` shows it as created, so the duplicates can be cleaned up first.
 
 ## Upgrading and Migration
 
