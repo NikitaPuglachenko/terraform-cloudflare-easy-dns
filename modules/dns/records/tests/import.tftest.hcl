@@ -61,3 +61,152 @@ run "no_existing_records" {
     error_message = "No import IDs without existing records"
   }
 }
+
+run "import_txt_quotes_inside_the_value" {
+  command = plan
+
+  variables {
+    records = {
+      "@" = {
+        TXT = [
+          { content = "v=spf1 \"a\" -all" },
+          { content = "plain value", key = "plain" },
+        ]
+      }
+    }
+    existing_records = [
+      # Same text with the inner quotes dropped: a different value
+      { id = "id-inner", name = "example.com", type = "TXT", content = "\"v=spf1 a -all\"" },
+      # Only the surrounding quotes differ: the same value
+      { id = "id-plain", name = "example.com", type = "TXT", content = "\"plain value\"" },
+    ]
+  }
+
+  assert {
+    condition     = output.import_record_ids == { "@ TXT plain" = "id-plain" }
+    error_message = "Quotes inside a TXT value must count, surrounding quotes must not"
+  }
+}
+
+run "import_structured_fields_case" {
+  command = plan
+
+  variables {
+    records = {
+      "_sip._udp" = {
+        NAPTR = [{
+          key  = "naptr"
+          data = { order = 10, preference = 10, flags = "S", service = "SIP+D2U", regex = "!^.*$!sip:Info@example.com!", replacement = "_sip._udp.example.com" }
+        }]
+      }
+    }
+    existing_records = [
+      # The hostname differs in case and by a trailing dot only: the same record
+      { id = "id-naptr", name = "_sip._udp.example.com", type = "NAPTR", data = { order = "10", preference = "10", flags = "S", service = "SIP+D2U", regex = "!^.*$!sip:Info@example.com!", replacement = "_SIP._udp.Example.com." } },
+    ]
+  }
+
+  assert {
+    condition     = output.import_record_ids == { "_sip._udp NAPTR naptr" = "id-naptr" }
+    error_message = "Hostname fields must be compared case-insensitively"
+  }
+}
+
+run "import_structured_fields_exact" {
+  command = plan
+
+  variables {
+    records = {
+      "_sip._udp" = {
+        NAPTR = [{
+          key  = "naptr"
+          data = { order = 10, preference = 10, flags = "S", service = "SIP+D2U", regex = "!^.*$!sip:Info@example.com!", replacement = "_sip._udp.example.com" }
+        }]
+      }
+    }
+    existing_records = [
+      # The regex differs in case: a different record
+      { id = "id-naptr", name = "_sip._udp.example.com", type = "NAPTR", data = { order = "10", preference = "10", flags = "S", service = "SIP+D2U", regex = "!^.*$!sip:info@example.com!", replacement = "_sip._udp.example.com" } },
+    ]
+  }
+
+  assert {
+    condition     = output.import_record_ids == {}
+    error_message = "Fields other than hostnames and hex values must match exactly"
+  }
+}
+
+run "import_caa_issuer_case" {
+  command = plan
+
+  variables {
+    records = {
+      "@" = {
+        CAA = [
+          { content = "LetsEncrypt.org", tag = "issue" },
+          { content = "pki.goog; accounturi=https://example.net/Acct/1", tag = "issuewild" },
+          { content = "mailto:Ops@example.com", tag = "iodef" },
+        ]
+      }
+    }
+    existing_records = [
+      # The issuer domain differs in case: the same record
+      { id = "id-issue", name = "example.com", type = "CAA", data = { flags = "0", tag = "issue", value = "letsencrypt.org" } },
+      # The account URI parameter differs in case: a different record
+      { id = "id-wild", name = "example.com", type = "CAA", data = { flags = "0", tag = "issuewild", value = "PKI.goog; accounturi=https://example.net/acct/1" } },
+      # iodef is a URL, compared exactly
+      { id = "id-iodef", name = "example.com", type = "CAA", data = { flags = "0", tag = "iodef", value = "mailto:ops@example.com" } },
+    ]
+  }
+
+  assert {
+    condition     = output.import_record_ids == { "@ CAA issue LetsEncrypt.org" = "id-issue" }
+    error_message = "CAA issuer domains must match case-insensitively, parameters and iodef exactly"
+  }
+}
+
+run "import_openpgpkey_exact" {
+  command = plan
+
+  variables {
+    records = {
+      "a._openpgpkey" = { OPENPGPKEY = [{ content = "mQENBAbc", key = "a" }] }
+      "b._openpgpkey" = { OPENPGPKEY = [{ content = "mQENBXyz", key = "b" }] }
+    }
+    existing_records = [
+      # base64 differing in case: a different key
+      { id = "id-a", name = "a._openpgpkey.example.com", type = "OPENPGPKEY", content = "MQENBABC" },
+      { id = "id-b", name = "b._openpgpkey.example.com", type = "OPENPGPKEY", content = "mQENBXyz" },
+    ]
+  }
+
+  assert {
+    condition     = output.import_record_ids == { "b._openpgpkey OPENPGPKEY b" = "id-b" }
+    error_message = "OPENPGPKEY content must be compared exactly"
+  }
+}
+
+run "import_txt_quoted_and_escaped" {
+  command = plan
+
+  variables {
+    records = {
+      "a" = { TXT = [{ content = "v=spf1 \"a\" -all" }] }
+      "b" = { TXT = [{ content = "\"v=spf1 \\\"b\\\" -all\"" }] }
+      "c" = { TXT = [{ content = "back\\slash", key = "c" }] }
+    }
+    existing_records = [
+      # Stored in the zone file form with escaped quotes: the same DNS record as the unquoted form
+      { id = "id-a", name = "a.example.com", type = "TXT", content = "\"v=spf1 \\\"a\\\" -all\"" },
+      # Stored unquoted, configured in the zone file form
+      { id = "id-b", name = "b.example.com", type = "TXT", content = "v=spf1 \"b\" -all" },
+      # A quoted value with an escaped backslash
+      { id = "id-c", name = "c.example.com", type = "TXT", content = "\"back\\\\slash\"" },
+    ]
+  }
+
+  assert {
+    condition     = length(output.import_record_ids) == 3 && output.import_record_ids["c TXT c"] == "id-c"
+    error_message = "Quoted TXT values must be compared without their escapes"
+  }
+}
