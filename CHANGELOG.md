@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Fixed
+
+- Import matching with `import_existing` no longer drops quotes inside TXT values or compares every `data` field case-insensitively, which could match a different existing record (a TXT value differing only in inner quotes, a NAPTR `regex` or a public key differing in case); hostnames and hex values are still compared case-insensitively
+- Import matching treats a TXT value in the zone file form (`"v=spf1 \"a\" -all"`) as the same record as its unquoted form (`v=spf1 "a" -all`), as Cloudflare serves them identically; before, such a record was not adopted and `apply` failed with "record already exists"
+- Import matching compares the issuer domain of CAA `issue`/`issuewild` values case-insensitively again (the parameters after `;` and `iodef` URLs exactly), and OPENPGPKEY keys exactly instead of lower-cased
+- Two or more `CNAME`s on one name are rejected also when they have different `key`s
+- The same record written with different name forms (`www` and `www.example.com`, `@` and the zone name) is rejected as a duplicate at `plan` instead of failing at `apply`; addresses and hostnames are compared case-insensitively and without a trailing dot
+- The CNAME checks compare names fully qualified: a `CNAME` on the zone name is accepted next to other records like one on `@`, and `www` and `www.example.com` are the same name
+
 ## [2.6.3] - 2026-09-29
 
 ### Added

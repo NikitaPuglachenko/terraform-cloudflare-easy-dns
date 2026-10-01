@@ -41,8 +41,8 @@ locals {
   ]
 
   # Keys follow the zone file format: "<name> <TYPE> <value>"
-  records = [
-    for r in local.resolved : {
+  keyed = [
+    for r in local.resolved : merge(r, {
       key = (
         r.rec.key != null ? "${r.name} ${r.type} ${r.rec.key}" :
         r.type == "CNAME" ? "${r.name} CNAME" :
@@ -51,9 +51,29 @@ locals {
         contains(local.data_types, r.type) ? "${r.name} ${r.type} ${substr(sha1(jsonencode(r.rec.data)), 0, 12)}" :
         "${r.name} ${r.type} ${r.content}"
       )
+    })
+  ]
+
+  records = [
+    for r in local.keyed : {
+      key     = r.key
       old_key = r.old_key
       source  = r.source
       name    = r.name
+      # Fully qualified, so "@" and the zone name, or "www" and "www.example.com",
+      # are the same name
+      fqdn = (
+        lower(trimsuffix(r.name, ".")) == "@" ? lower(var.root_domain) :
+        lower(trimsuffix(r.name, ".")) == lower(var.root_domain) || endswith(lower(trimsuffix(r.name, ".")), ".${lower(var.root_domain)}") ? lower(trimsuffix(r.name, ".")) :
+        "${lower(trimsuffix(r.name, "."))}.${lower(var.root_domain)}"
+      )
+      # The key without its name part, normalized like DNS compares it: addresses
+      # and hostnames case-insensitively and without a trailing dot
+      key_value = (
+        r.rec.key == null && contains(["A", "AAAA", "MX", "NS", "PTR"], r.type)
+        ? "${r.type} ${lower(trimsuffix(r.content, "."))}"
+        : trimprefix(r.key, "${r.name} ")
+      )
       type    = r.type
       content = r.type == "CAA" || contains(local.data_types, r.type) ? null : r.content
       ttl     = coalesce(r.rec.ttl, var.default_ttl)
@@ -82,16 +102,31 @@ locals {
   ]
 
   grouped = { for r in local.records : r.key => r... }
-  duplicates = [
-    for key, group in local.grouped : "\"${key}\" from ${join(" and ", [for r in group : r.source])}"
-    if length(group) > 1
-  ]
 
-  # A CNAME cannot share its name with other records, except at the zone apex (CNAME flattening)
-  by_name = { for r in local.records : lower(r.name) => r... }
+  # The same record written with different name forms ("www" and "www.example.com",
+  # "@" and the zone name) gets different keys, so it is checked separately
+  by_identity = { for r in local.records : "${r.fqdn} ${r.key_value}" => r... }
+
+  duplicates = concat(
+    [
+      for key, group in local.grouped : "\"${key}\" from ${join(" and ", [for r in group : r.source])}"
+      if length(group) > 1
+    ],
+    [
+      for identity, group in local.by_identity : "\"${identity}\" as ${join(" and ", [for r in group : "\"${r.key}\" from ${r.source}"])}"
+      if length(distinct([for r in group : r.key])) > 1
+    ],
+  )
+
+  # A CNAME cannot share its name with other records, except at the zone apex (CNAME
+  # flattening), and a name has at most one CNAME, whatever keys the records have.
+  # Names are grouped fully qualified, so "@" and the zone name, or "www" and
+  # "www.example.com", are the same name.
+  by_name = { for r in local.records : r.fqdn => r... }
   cname_conflicts = [
     for name, group in local.by_name : "\"${name}\": ${join(", ", [for r in group : "${r.type} from ${r.source}"])}"
-    if name != "@" && anytrue([for r in group : r.type == "CNAME"]) && anytrue([for r in group : r.type != "CNAME"])
+    if length([for r in group : r if r.type == "CNAME"]) > 1
+    || (name != lower(var.root_domain) && anytrue([for r in group : r.type == "CNAME"]) && anytrue([for r in group : r.type != "CNAME"]))
   ]
 
   flat_records = {
