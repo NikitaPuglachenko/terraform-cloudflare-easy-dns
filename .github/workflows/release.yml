@@ -23,20 +23,28 @@ jobs:
           ' CHANGELOG.md >notes.md
           test -s notes.md || { echo "No CHANGELOG entry for ${GITHUB_REF_NAME}"; exit 1; }
 
-      # The module files only, for a local copy in the configurations that use it
-      - name: Module archive
+      # The module files only, for a local copy in the configurations that use it:
+      # the full module, and a provider v5 one without the v4 wrapper and its
+      # migration moved block
+      - name: Module archives
         run: |
-          archive="terraform-cloudflare-easy-dns-${GITHUB_REF_NAME}.tar.gz"
-          mkdir -p dist/module
+          full="terraform-cloudflare-easy-dns-${GITHUB_REF_NAME}.tar.gz"
+          v5="terraform-cloudflare-easy-dns-v5-${GITHUB_REF_NAME}.tar.gz"
+          mkdir -p dist/module dist/module-v5
           git archive HEAD -- ':(glob)*.tf' modules schema README.md CHANGELOG.md LICENSE \
             ':(exclude,glob)modules/**/tests/**' | tar -x -C dist/module
+          git archive HEAD -- ':(glob)*.tf' modules/dns/v5 modules/dns/records schema README.md CHANGELOG.md LICENSE \
+            ':(exclude,glob)modules/**/tests/**' ':(exclude)modules/dns/v5/migrate-from-v4.tf' | tar -x -C dist/module-v5
           echo "$GITHUB_REF_NAME" >dist/module/VERSION
-          tar -czf "dist/${archive}" -C dist/module .
-          (cd dist && sha256sum "${archive}" >SHA256SUMS)
+          echo "$GITHUB_REF_NAME" >dist/module-v5/VERSION
+          tar -czf "dist/${full}" -C dist/module .
+          tar -czf "dist/${v5}" -C dist/module-v5 .
+          (cd dist && sha256sum "${full}" "${v5}" >SHA256SUMS)
 
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md --latest \
-            "dist/terraform-cloudflare-easy-dns-${GITHUB_REF_NAME}.tar.gz" dist/SHA256SUMS
+            "dist/terraform-cloudflare-easy-dns-${GITHUB_REF_NAME}.tar.gz" \
+            "dist/terraform-cloudflare-easy-dns-v5-${GITHUB_REF_NAME}.tar.gz" dist/SHA256SUMS

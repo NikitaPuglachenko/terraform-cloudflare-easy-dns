@@ -133,3 +133,22 @@ run "record_is_not_an_object" {
 
   expect_failures = [var.records]
 }
+
+run "names_in_lower_case_and_allowed_cname_conflicts" {
+  command = plan
+
+  variables {
+    records = {
+      "Community" = {
+        CNAME = [{ content = "forum.example.net" }]
+        MX    = [{ content = "mx.example.net", priority = 10 }]
+      }
+    }
+    allowed_cname_conflicts = ["community.example.com"]
+  }
+
+  assert {
+    condition     = cloudflare_record.record["Community CNAME"].name == "community" && cloudflare_record.record["Community MX mx.example.net"].name == "community"
+    error_message = "The resource gets the name in lower case, and the listed CNAME conflict is accepted"
+  }
+}

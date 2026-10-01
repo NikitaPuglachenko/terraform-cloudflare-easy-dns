@@ -5,13 +5,14 @@ locals {
 module "records" {
   source = "../records"
 
-  root_domain      = local.root_domain
-  records          = var.records
-  existing_records = local.existing_records
-  default_ttl      = var.default_ttl
-  default_proxied  = var.default_proxied
-  default_comment  = var.default_comment
-  default_tags     = var.default_tags
+  root_domain             = local.root_domain
+  records                 = var.records
+  existing_records        = local.existing_records
+  default_ttl             = var.default_ttl
+  default_proxied         = var.default_proxied
+  default_comment         = var.default_comment
+  default_tags            = var.default_tags
+  allowed_cname_conflicts = var.allowed_cname_conflicts
 }
 
 data "cloudflare_zone" "this" {
@@ -75,10 +76,4 @@ resource "cloudflare_dns_record" "record" {
     value          = lookup(each.value.data, "value", null)
     weight         = lookup(each.value.data, "weight", null)
   }
-}
-
-# Migration from the v4 module: state of cloudflare_record is moved without recreating records
-moved {
-  from = cloudflare_record.record
-  to   = cloudflare_dns_record.record
 }
