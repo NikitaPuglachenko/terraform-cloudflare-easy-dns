@@ -185,3 +185,28 @@ run "import_openpgpkey_exact" {
     error_message = "OPENPGPKEY content must be compared exactly"
   }
 }
+
+run "import_txt_quoted_and_escaped" {
+  command = plan
+
+  variables {
+    records = {
+      "a" = { TXT = [{ content = "v=spf1 \"a\" -all" }] }
+      "b" = { TXT = [{ content = "\"v=spf1 \\\"b\\\" -all\"" }] }
+      "c" = { TXT = [{ content = "back\\slash", key = "c" }] }
+    }
+    existing_records = [
+      # Stored in the zone file form with escaped quotes: the same DNS record as the unquoted form
+      { id = "id-a", name = "a.example.com", type = "TXT", content = "\"v=spf1 \\\"a\\\" -all\"" },
+      # Stored unquoted, configured in the zone file form
+      { id = "id-b", name = "b.example.com", type = "TXT", content = "v=spf1 \"b\" -all" },
+      # A quoted value with an escaped backslash
+      { id = "id-c", name = "c.example.com", type = "TXT", content = "\"back\\\\slash\"" },
+    ]
+  }
+
+  assert {
+    condition     = length(output.import_record_ids) == 3 && output.import_record_ids["c TXT c"] == "id-c"
+    error_message = "Quoted TXT values must be compared without their escapes"
+  }
+}

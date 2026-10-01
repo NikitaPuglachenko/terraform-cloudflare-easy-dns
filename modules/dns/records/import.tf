@@ -3,22 +3,28 @@
 
 locals {
   # Names, hostnames and hex values are compared case-insensitively and without a
-  # trailing dot, other values exactly. TXT values are joined from the quoted chunks
-  # Cloudflare may return them in, and one pair of surrounding quotes is dropped;
-  # quotes inside the value still count. OPENPGPKEY content is base64, so it is
+  # trailing dot, other values exactly. OPENPGPKEY content is base64, so it is
   # compared exactly.
+  #
+  # Cloudflare stores TXT content as it was sent, and v=spf1 "a" -all and
+  # "v=spf1 \"a\" -all" are the same DNS record. So TXT values are joined from
+  # quoted chunks, and a quoted value loses its surrounding quotes and its escapes
+  # (\" and \\); quotes inside the value still count.
   txt_chunks_joined = { for r in var.existing_records : r.id => r.content == null ? "" : replace(r.content, "\" \"", "") }
+  existing_txt = {
+    for id, v in local.txt_chunks_joined : id => (
+      length(v) >= 2 && startswith(v, "\"") && endswith(v, "\"")
+      ? replace(replace(substr(v, 1, length(v) - 2), "\\\"", "\""), "\\\\", "\\")
+      : v
+    )
+  }
   existing = [
     for r in var.existing_records : {
       id   = r.id
       name = lower(trimsuffix(r.name, "."))
       type = r.type
       content = r.content == null ? null : (
-        r.type == "TXT" ? (
-          length(local.txt_chunks_joined[r.id]) >= 2 && startswith(local.txt_chunks_joined[r.id], "\"") && endswith(local.txt_chunks_joined[r.id], "\"")
-          ? substr(local.txt_chunks_joined[r.id], 1, length(local.txt_chunks_joined[r.id]) - 2)
-          : local.txt_chunks_joined[r.id]
-        ) : contains(local.exact_content_types, r.type) ? r.content : lower(trimsuffix(r.content, "."))
+        r.type == "TXT" ? local.existing_txt[r.id] : contains(local.exact_content_types, r.type) ? r.content : lower(trimsuffix(r.content, "."))
       )
       data = coalesce(r.data, {})
     }
@@ -34,9 +40,16 @@ locals {
   # compared like a hostname, the parameters (account URIs, ...) exactly
   caa_issuer_tags = ["issue", "issuewild"]
 
-  configured_txt = {
+  configured_txt_joined = {
     for key, rec in local.flat_records : key => replace(rec.content, "\" \"", "")
     if rec.type == "TXT"
+  }
+  configured_txt = {
+    for key, v in local.configured_txt_joined : key => (
+      length(v) >= 2 && startswith(v, "\"") && endswith(v, "\"")
+      ? replace(replace(substr(v, 1, length(v) - 2), "\\\"", "\""), "\\\\", "\\")
+      : v
+    )
   }
 
   import_matches = {
@@ -47,11 +60,7 @@ locals {
       && (
         rec.data == null
         ? e.content == (
-          rec.type == "TXT" ? (
-            length(local.configured_txt[key]) >= 2 && startswith(local.configured_txt[key], "\"") && endswith(local.configured_txt[key], "\"")
-            ? substr(local.configured_txt[key], 1, length(local.configured_txt[key]) - 2)
-            : local.configured_txt[key]
-          ) : contains(local.exact_content_types, rec.type) ? rec.content : lower(trimsuffix(rec.content, "."))
+          rec.type == "TXT" ? local.configured_txt[key] : contains(local.exact_content_types, rec.type) ? rec.content : lower(trimsuffix(rec.content, "."))
         )
         : alltrue([
           for field, value in rec.data : (
