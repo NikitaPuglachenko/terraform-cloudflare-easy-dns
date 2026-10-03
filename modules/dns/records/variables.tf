@@ -287,15 +287,18 @@ variable "records" {
     condition = alltrue(flatten([
       for base_name, type_map in var.records : [
         for raw_key, recs in type_map : [
+          # A null value becomes "" (invalid): Terraform 1.8 evaluates both sides of ||
           for rec in recs : [
-            for value in [lookup(coalesce(rec.data, {}), element(split(".", raw_key), length(split(".", raw_key)) - 1) == "NAPTR" ? "replacement" : "target", ".")] : (
-              value == "."
-              || (
-                length(trimsuffix(value, ".")) <= 253
-                && can(regex("^[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.?$", value))
-                && !can(cidrhost("${trimsuffix(value, ".")}/32", 0))
+            for raw in [lookup(coalesce(rec.data, {}), element(split(".", raw_key), length(split(".", raw_key)) - 1) == "NAPTR" ? "replacement" : "target", ".")] : [
+              for value in [raw == null ? "" : raw] : (
+                value == "."
+                || (
+                  length(trimsuffix(value, ".")) <= 253
+                  && can(regex("^[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.?$", value))
+                  && !can(cidrhost("${trimsuffix(value, ".")}/32", 0))
+                )
               )
-            )
+            ]
           ]
         ] if contains(["SRV", "HTTPS", "SVCB", "NAPTR"], element(split(".", raw_key), length(split(".", raw_key)) - 1))
       ]

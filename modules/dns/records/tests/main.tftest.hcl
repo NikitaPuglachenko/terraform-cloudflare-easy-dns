@@ -315,6 +315,16 @@ run "srv_target_ip" {
   expect_failures = [var.records]
 }
 
+run "srv_target_null" {
+  command = plan
+
+  variables {
+    records = { "_sip._tcp" = { SRV = [{ data = { priority = 10, weight = 5, port = 5060, target = null } }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
 run "https_target_at" {
   command = plan
 
