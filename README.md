@@ -61,7 +61,7 @@ Everything else (all record types, defaults, import of existing records, validat
 
 ## Contents
 
-- [Features](#features), [Structure](#structure), [Requirements](#requirements)
+- [Features](#features), [When Not to Use It](#when-not-to-use-it), [Structure](#structure), [Requirements](#requirements)
 - [Usage](#usage): [local copy](#local-copy), [Git source](#git-source), [HCL or YAML](#hcl-or-yaml) and the [full example](#full-example)
 - [Record Model](#record-model): [record types](#record-types), [aliases](#the-aliases-logic), [record keys](#record-keys)
 - [Validation](#validation), [Inputs](#inputs), [Outputs](#outputs)
@@ -84,6 +84,15 @@ Everything else (all record types, defaults, import of existing records, validat
 - 🏷 **Defaults, Comments and Tags**: Set the TTL, proxying, comment and tags once for all records, and override them per record.
 - ✍️ **Editor Support for YAML**: A JSON Schema for records kept in YAML, for completion and highlighting of mistakes before `plan`.
 - 🧪 **Tested End to End**: Every record type, updates, import and the v4 to v5 migration are tested against a real Cloudflare zone.
+
+## When Not to Use It
+
+The module fits zones whose records are written down and change through review. Something else fits better when:
+
+- **Records come from other systems at run time** (service discovery, Kubernetes ingresses, an inventory): a controller such as external-dns, or `cloudflare_dns_record` with `for_each` over that data. The module needs the records at `plan`, and every value computed by another resource needs a `key` (see [Record Keys](#record-keys)).
+- **The zone must match the configuration exactly**, with records that are not in it deleted: the module manages only its own records and leaves the rest of the zone alone; [import](#importing-existing-records) only adopts records that are in the configuration.
+- **Records need lifecycle rules** (`prevent_destroy`, `ignore_changes`): Terraform does not let a configuration set them on the resources inside a module.
+- **Records need a type or field the module does not support**: see [the recipe](#a-record-type-or-field-the-module-does-not-support) for managing them next to the module call; when that is most of the zone, plain resources are simpler.
 
 ## Structure
 
@@ -677,7 +686,7 @@ Run `terraform init -upgrade` and `terraform plan`: it should only show records 
 
 ## Testing
 
-The core module, both wrappers and the examples have plan-only tests (the wrappers and examples use a mocked provider), no Cloudflare credentials needed:
+The core module, both wrappers and the examples have plan-only tests (the wrappers and examples use a mocked provider), no Cloudflare credentials needed. The core module's tests also pin the invariants of name normalization (`names.tftest.hcl`: every form of a name gives one fully qualified name) and record identity (`identity.tftest.hcl`: reordering records keeps their keys, a `key` keeps the address when the value changes, YAML and HCL give the same records):
 
 ```sh
 cd modules/dns/v5
@@ -691,6 +700,7 @@ The module READMEs are generated with [terraform-docs](https://terraform-docs.io
 ./scripts/generate-docs.sh
 python3 scripts/generate-schema.py
 python3 scripts/test-schema.py   # requires jsonschema and pyyaml
+python3 scripts/test-schema.py --terraform   # the same documents through the module: schema and validation must agree
 ```
 
 CI runs `terraform fmt`, `validate` and `test` for the root module, the core module, both wrappers and the examples (on Terraform 1.8 and the latest version, and on the minimum supported provider versions), checks that the module READMEs and the JSON Schema are up to date, tests the schema, checks that the root module and the wrappers have the same interface, [TFLint](https://github.com/terraform-linters/tflint) and [Gitleaks](https://github.com/gitleaks/gitleaks) on every pull request.
@@ -701,8 +711,8 @@ CI runs `terraform fmt`, `validate` and `test` for the root module, the core mod
 
 1. Creates records of every type through the root module and checks that a second `plan` shows no changes (no drift in the provider).
 2. Changes values: a record without a `key` is replaced, a record with a `key` is updated in place.
-3. Adopts the same records into an empty state with `import_existing` and checks that all of them are imported and none created.
-4. Creates records with the v4 wrapper and opens the state with the v5 wrapper: the records must be moved, not recreated.
+3. Adopts the same records into an empty state with `import_existing` and checks that all of them are imported, none created, and each one under the ID of the record created in step 1.
+4. Creates records with the v4 wrapper and opens the state with the v5 wrapper: the records must be moved, not recreated, and keep their keys and Cloudflare IDs.
 5. Deletes everything. `tests/e2e/sweep.sh` also removes records left by failed runs; it only deletes records with the comment `easy-dns-e2e` and a run label in the name.
 
 ```sh

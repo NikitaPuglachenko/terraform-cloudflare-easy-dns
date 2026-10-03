@@ -11,6 +11,7 @@ crash.log
 # End-to-end test runs
 tests/e2e/**/tfplan
 tests/e2e/*.log
+tests/e2e/ids*
 
 # Local notes
 .todo
