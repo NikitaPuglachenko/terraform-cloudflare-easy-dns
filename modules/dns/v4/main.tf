@@ -78,3 +78,30 @@ resource "cloudflare_record" "record" {
     }
   }
 }
+
+# Numbers in text values are written in their canonical form ("0123" -> "123",
+# "1.10" -> "1.1"), which loses what was written in YAML; quoting keeps it
+check "records_text_values_are_strings" {
+  assert {
+    condition = alltrue(flatten([
+      for name, types in var.records : [
+        for type, list in types : [
+          for record in list : [
+            # fine: a JSON string, or a value that is not a number
+            for attribute in ["content", "key", "comment", "tag"] : startswith(jsonencode(try(record[attribute], "")), "\"") || !can(tonumber(try(record[attribute], "")))
+          ]
+        ]
+      ]
+    ]))
+    error_message = "Text values given as numbers are written in their canonical form (0123 -> 123, 1.10 -> 1.1); in YAML quote them to keep them as written:\n${join("\n", flatten([
+      for name, types in var.records : [
+        for type, list in types : [
+          for index, record in list : [
+            for attribute in ["content", "key", "comment", "tag"] : "records[\"${name}\"][\"${type}\"][${index}].${attribute} is ${jsonencode(record[attribute])}"
+            if !startswith(jsonencode(try(record[attribute], "")), "\"") && can(tonumber(try(record[attribute], "")))
+          ]
+        ]
+      ]
+    ]))}"
+  }
+}

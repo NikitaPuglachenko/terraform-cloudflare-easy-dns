@@ -49,6 +49,32 @@ variable "records" {
       "records must be a map of names to maps of record types to lists of records."
     )
   }
+  # YAML 1.1 reads unquoted off/on/yes/no/N/Y as booleans, and Terraform would turn them
+  # into "false"/"true" without an error; values that must be text cannot be booleans
+  validation {
+    condition = try(alltrue(flatten([
+      for name, types in var.records : [
+        for type, list in types : [
+          for record in list : [
+            for attribute in ["content", "key", "comment", "tag"] : !contains(["true", "false"], jsonencode(try(record[attribute], "")))
+          ]
+        ]
+      ]
+    ])), true)
+    error_message = try(
+      "Text values must be strings, in YAML quote them (\"off\", \"yes\", \"N\"); unquoted they are read as booleans:\n${join("\n", flatten([
+        for name, types in var.records : [
+          for type, list in types : [
+            for index, record in list : [
+              for attribute in ["content", "key", "comment", "tag"] : "records[\"${name}\"][\"${type}\"][${index}].${attribute} is ${jsonencode(record[attribute])}"
+              if contains(["true", "false"], jsonencode(try(record[attribute], "")))
+            ]
+          ]
+        ]
+      ]))}",
+      "Text values must be strings."
+    )
+  }
 }
 
 variable "import_existing" {

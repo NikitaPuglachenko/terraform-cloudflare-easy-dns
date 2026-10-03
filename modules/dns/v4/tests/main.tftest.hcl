@@ -166,3 +166,56 @@ run "minimum_ttl_passed_to_the_core" {
     error_message = "minimum_ttl must reach the core module"
   }
 }
+
+run "yaml_booleans_in_text_values" {
+  command = plan
+
+  variables {
+    records = yamldecode(<<-YAML
+      "@":
+        TXT:
+          - content: off
+          - content: "quoted"
+            comment: yes
+    YAML
+    )
+  }
+
+  expect_failures = [var.records]
+}
+
+run "yaml_quoted_text_values" {
+  command = plan
+
+  variables {
+    records = yamldecode(<<-YAML
+      "@":
+        TXT:
+          - content: "off"
+          - content: "0123"
+            key: "n"
+    YAML
+    )
+  }
+
+  assert {
+    condition     = length([for r in cloudflare_record.record : r if r.content == "off" || r.content == "0123"]) == 2
+    error_message = "Quoted values must stay as written"
+  }
+}
+
+run "yaml_numbers_in_text_values" {
+  command = plan
+
+  variables {
+    records = yamldecode(<<-YAML
+      "@":
+        TXT:
+          - content: 0123
+            key: "n"
+    YAML
+    )
+  }
+
+  expect_failures = [check.records_text_values_are_strings]
+}
