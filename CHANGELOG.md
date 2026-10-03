@@ -4,6 +4,22 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.10.1] - 2026-10-03
+
+### Fixed
+
+- A `zone_name` with a trailing dot (`"example.com."`, as in zone files) broke the fully qualified names used by the checks and by import matching (`app.example.com` was taken for `app.example.com.example.com.`, so it was not found in the zone and not compared with `app`), and alias targets got the dot (`example.com.`); the trailing dot is now ignored. Record names sent to Cloudflare were not affected; an alias created with such a `zone_name` gets a one-time in-place update of its target
+- An empty `zone_name` failed with an unclear error in `coalesce()`; `zone_name` is now validated as a DNS name (root module and both wrappers)
+- `allowed_cname_conflicts` accepted any string, and a misspelled name never matched; the names are now validated like the names in `records`
+
+### Added
+
+- With `import_existing`, `plan` warns when the lookup of a record type returns 10,000 records (the limit): records beyond it are not found and would be planned as new
+
+### Internal
+
+- Tests: zone names with a trailing dot and in another case, empty and invalid zone names, invalid and fully qualified `allowed_cname_conflicts`, one lookup per record type with `import_existing`
+
 ## [2.10.0] - 2026-10-03
 
 ### Changed
@@ -261,7 +277,8 @@ All notable changes to this project are documented in this file. The format is b
 - Inline aliases pointed to a relative name instead of the full hostname
 - Zone apex (`@`) handling for aliases and nested names
 
-[Unreleased]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.10.0...HEAD
+[Unreleased]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.10.1...HEAD
+[2.10.1]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.10.0...v2.10.1
 [2.10.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.9.0...v2.10.0
 [2.9.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.8.2...v2.9.0
 [2.8.2]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.8.1...v2.8.2
