@@ -210,3 +210,23 @@ run "import_txt_quoted_and_escaped" {
     error_message = "Quoted TXT values must be compared without their escapes"
   }
 }
+
+run "import_fully_qualified_base_name" {
+  command = plan
+
+  variables {
+    records = {
+      "app.example.com" = { A = [{ content = "192.0.2.1" }] }
+      "App"             = { AAAA = [{ content = "2001:db8::1" }] }
+    }
+    existing_records = [
+      { id = "id-a", name = "app.example.com", type = "A", content = "192.0.2.1" },
+      { id = "id-aaaa", name = "app.example.com", type = "AAAA", content = "2001:db8::1" },
+    ]
+  }
+
+  assert {
+    condition     = output.import_record_ids == { "app.example.com A 192.0.2.1" = "id-a", "App AAAA 2001:db8::1" = "id-aaaa" }
+    error_message = "Records with fully qualified and short base names must both be matched"
+  }
+}

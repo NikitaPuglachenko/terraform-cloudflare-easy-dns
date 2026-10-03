@@ -246,14 +246,25 @@ variable "records" {
           for rec in recs : (
             element(split(".", raw_key), length(split(".", raw_key)) - 1) == "A" ? can(cidrhost("${coalesce(rec.content, "x")}/32", 0)) && !strcontains(coalesce(rec.content, "x"), ":") :
             element(split(".", raw_key), length(split(".", raw_key)) - 1) == "AAAA" ? can(cidrhost("${coalesce(rec.content, "x")}/128", 0)) && strcontains(coalesce(rec.content, "x"), ":") :
-            element(split(".", raw_key), length(split(".", raw_key)) - 1) == "CNAME" ? !can(cidrhost("${coalesce(rec.content, "x")}/32", 0)) && !strcontains(coalesce(rec.content, "x"), ":") :
+            # Hostnames: labels of letters, digits, '_' and '-' (up to 63 characters)
+            # separated by dots, at most 253 characters, an optional trailing dot; not an
+            # IP address. "@" is the zone apex, and "." is a null MX (RFC 7505).
+            contains(["CNAME", "MX", "NS", "PTR"], element(split(".", raw_key), length(split(".", raw_key)) - 1)) ? (
+              coalesce(rec.content, "x") == "@"
+              || (element(split(".", raw_key), length(split(".", raw_key)) - 1) == "MX" && coalesce(rec.content, "x") == ".")
+              || (
+                length(trimsuffix(coalesce(rec.content, "x"), ".")) <= 253
+                && can(regex("^[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.?$", coalesce(rec.content, "x")))
+                && !can(cidrhost("${trimsuffix(coalesce(rec.content, "x"), ".")}/32", 0))
+              )
+            ) :
             element(split(".", raw_key), length(split(".", raw_key)) - 1) == "TXT" ? length(coalesce(rec.content, "")) <= 2048 :
             true
           )
         ]
       ]
     ]))
-    error_message = "A records need an IPv4 address, AAAA records an IPv6 address, CNAME records a hostname (not an IP address), and TXT values are limited to 2048 characters."
+    error_message = "A records need an IPv4 address and AAAA records an IPv6 address; CNAME, MX, NS and PTR records need a hostname (labels of letters, digits, '_' and '-' up to 63 characters, at most 253 in total, not an IP address; \"@\" for the zone apex, \".\" for a null MX); TXT values are limited to 2048 characters."
   }
 }
 

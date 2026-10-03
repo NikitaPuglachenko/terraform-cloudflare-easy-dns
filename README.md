@@ -290,6 +290,8 @@ When you define `ALIASES` inside a block (e.g., inside `"app"`), the module crea
 - **Name**: The value provided in `content` (e.g., `support` for support.example.com).
 - **Target**: The base name plus the zone domain (e.g., `app.example.com`, or `example.com` for `@`).
 
+A base name may be short (`app`) or fully qualified (`app.example.com`): the target is the same fully qualified name, and `@` or the zone name point to the zone apex.
+
 ### Inline Aliases
 A key like `"cdn.ALIASES"` works the same way, but the target is the prefixed name: `cdn.app.example.com` (or `cdn.example.com` for `@`).
 
@@ -340,7 +342,7 @@ The `records` input is validated before any API call:
 - `ttl` and `default_ttl` must be `1` (automatic) or between `30` and `86400`
 - Only `A`, `AAAA`, `CNAME` and `ALIASES` records can be `proxied`
 - `MX` and `URI` records require `priority`
-- `A` records need an IPv4 address, `AAAA` records an IPv6 address, and `CNAME` records a hostname rather than an IP address
+- `A` records need an IPv4 address and `AAAA` records an IPv6 address; `CNAME`, `MX`, `NS` and `PTR` records need a hostname: labels of letters, digits, `_` and `-` (up to 63 characters) separated by dots, at most 253 characters, an optional trailing dot, and not an IP address (`@` stands for the zone apex, and `.` is a null `MX`, RFC 7505)
 - `TXT` values are limited to 2048 characters
 - Names, prefixes and `ALIASES` must be valid DNS names: labels of letters, digits, `_` and `-` separated by dots, optionally starting with `*` for wildcards
 - `CAA` records require `tag`: `issue`, `issuewild` or `iodef`

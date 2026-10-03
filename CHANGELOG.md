@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Fixed
+
+- `ALIASES` under a fully qualified base name (`"app.example.com"`) pointed to `app.example.com.example.com`, and `"cdn.ALIASES"` to `cdn.app.example.com.example.com`; alias targets now use the same fully qualified name as every other check, so a short and a fully qualified base name give the same target. Configurations that used short base names plan no change
+- Import matching (`import_existing`) did not find existing records under a fully qualified base name
+- `CNAME`, `MX`, `NS` and `PTR` values are validated as hostnames (labels of letters, digits, `_` and `-`, at most 253 characters, not an IP address; `@` for the apex, `.` for a null `MX`); before, only `CNAME` was checked, and only for not being an IP address, so values with spaces or invalid characters failed at the Cloudflare API
+
 ## [2.7.0] - 2026-10-01
 
 ### Added

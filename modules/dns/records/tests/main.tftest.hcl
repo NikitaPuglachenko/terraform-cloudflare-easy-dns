@@ -666,3 +666,91 @@ run "mx_differing_only_in_priority_with_keys" {
     error_message = "MX records differing only in priority are accepted with keys"
   }
 }
+
+run "aliases_under_a_fully_qualified_base_name" {
+  command = plan
+
+  variables {
+    records = {
+      "app.example.com" = {
+        A             = [{ content = "192.0.2.1" }]
+        ALIASES       = [{ content = "support" }]
+        "cdn.ALIASES" = [{ content = "static" }]
+        "_dmarc.TXT"  = [{ content = "v=DMARC1; p=none" }]
+      }
+      "example.com" = {
+        ALIASES = [{ content = "www" }]
+      }
+    }
+  }
+
+  assert {
+    condition = (
+      output.flat_records["support CNAME"].content == "app.example.com"
+      && output.flat_records["static CNAME"].content == "cdn.app.example.com"
+      && output.flat_records["www CNAME"].content == "example.com"
+      && one([for r in output.flat_records : r.name if r.type == "TXT"]) == "_dmarc.app.example.com"
+    )
+    error_message = "A fully qualified base name must not get the zone name appended again"
+  }
+}
+
+run "hostnames_valid" {
+  command = plan
+
+  variables {
+    records = {
+      "www"    = { CNAME = [{ content = "Target-1.example.net." }] }
+      "s1"     = { CNAME = [{ content = "s1._domainkey.mail.example.net" }] }
+      "apex"   = { CNAME = [{ content = "@" }] }
+      "@"      = { MX = [{ content = "mx1.example.net", priority = 10 }], NS = [{ content = "ns1.example.net" }] }
+      "nomail" = { MX = [{ content = ".", priority = 0 }] }
+      "1.2"    = { PTR = [{ content = "host.example.com." }] }
+    }
+  }
+
+  assert {
+    condition     = length(output.flat_records) == 7
+    error_message = "Valid hostnames, @ and a null MX must be accepted"
+  }
+}
+
+run "cname_with_spaces" {
+  command = plan
+  variables {
+    records = { "www" = { CNAME = [{ content = "not a host" }] } }
+  }
+  expect_failures = [var.records]
+}
+
+run "cname_with_invalid_characters" {
+  command = plan
+  variables {
+    records = { "www" = { CNAME = [{ content = "target!.example.net" }] } }
+  }
+  expect_failures = [var.records]
+}
+
+run "mx_with_an_ip_address" {
+  command = plan
+  variables {
+    records = { "@" = { MX = [{ content = "192.0.2.10", priority = 10 }] } }
+  }
+  expect_failures = [var.records]
+}
+
+run "ns_with_a_label_over_63_characters" {
+  command = plan
+  variables {
+    records = { "sub" = { NS = [{ content = "${join("", [for i in range(64) : "a"])}.example.net" }] } }
+  }
+  expect_failures = [var.records]
+}
+
+run "null_mx_only_for_mx" {
+  command = plan
+  variables {
+    records = { "www" = { CNAME = [{ content = "." }] } }
+  }
+  expect_failures = [var.records]
+}
