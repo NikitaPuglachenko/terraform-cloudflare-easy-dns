@@ -1,0 +1,56 @@
+name: Bug report
+description: The module creates, changes or rejects records in a way it should not
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not report security problems here, see [SECURITY.md](https://github.com/i386dev/terraform-cloudflare-easy-dns/blob/main/SECURITY.md).
+        Remove tokens and real zone IDs from everything you paste.
+  - type: input
+    id: version
+    attributes:
+      label: Module version
+      placeholder: v2.10.0
+    validations:
+      required: true
+  - type: dropdown
+    id: wrapper
+    attributes:
+      label: Module
+      options:
+        - Root module
+        - modules/dns/v5
+        - modules/dns/v4
+    validations:
+      required: true
+  - type: input
+    id: terraform
+    attributes:
+      label: Terraform and Cloudflare provider versions
+      description: Output of `terraform version`
+      placeholder: Terraform v1.9.8, cloudflare/cloudflare v5.26.0
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration
+      description: The smallest `records` (HCL or YAML) and module inputs that show the problem
+      render: hcl
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happens
+      description: The error, or the relevant part of `terraform plan`
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true

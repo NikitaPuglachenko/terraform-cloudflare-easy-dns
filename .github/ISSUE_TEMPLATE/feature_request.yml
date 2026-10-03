@@ -1,0 +1,22 @@
+name: Feature request
+description: A record type, field, input or behavior the module does not support
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you want to do
+      description: The DNS setup you want to describe and what stops you today
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: How it could look
+      description: An example of `records` or of the inputs you would like to write
+      render: hcl
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround
+      description: What you do now, e.g. the recipe for unsupported record types in the README
