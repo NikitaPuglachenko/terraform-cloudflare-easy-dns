@@ -232,3 +232,58 @@ run "yaml_numbers_in_text_values" {
 
   expect_failures = [check.records_text_values_are_strings]
 }
+
+# Import through the wrapper: one lookup per record type of the configuration, ALIASES
+# looked up as CNAME. Matching is tested in modules/dns/records (tests/import.tftest.hcl)
+# and against a real zone in tests/e2e: the mocked provider cannot return a list for the
+# nested result attribute of cloudflare_dns_records
+run "import_lookups_per_type" {
+  command = plan
+
+  variables {
+    import_existing = true
+  }
+
+  assert {
+    condition     = toset(keys(data.cloudflare_dns_records.existing)) == toset(["A", "CAA", "CNAME", "DNSKEY", "MX", "NAPTR", "SRV", "TXT"])
+    error_message = "One lookup per record type, ALIASES as CNAME"
+  }
+
+  assert {
+    condition     = output.import_ids == {} && output.import_duplicates == {}
+    error_message = "No matches in an empty zone"
+  }
+}
+
+run "no_lookups_without_import_existing" {
+  command = plan
+
+  assert {
+    condition     = length(data.cloudflare_dns_records.existing) == 0
+    error_message = "The zone is only read with import_existing"
+  }
+}
+
+run "empty_zone_name" {
+  command = plan
+
+  variables {
+    zone_name = ""
+  }
+
+  expect_failures = [var.zone_name]
+}
+
+run "zone_name_with_a_trailing_dot" {
+  command = plan
+
+  variables {
+    zone_name = "Example.com."
+    records   = { "app" = { A = [{ content = "192.0.2.1" }], ALIASES = [{ content = "www" }] }, "api.example.com" = { A = [{ content = "192.0.2.2" }] } }
+  }
+
+  assert {
+    condition     = sort([for r in values(module.records.flat_records) : r.fqdn]) == tolist(["api.example.com", "app.example.com", "www.example.com"])
+    error_message = "A trailing dot and the case of zone_name do not change the names"
+  }
+}

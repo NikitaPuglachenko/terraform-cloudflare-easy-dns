@@ -3,6 +3,10 @@
 # fqdn map every form to one name, which all comparisons use.
 
 locals {
+  # The zone name as compared and appended: without a trailing dot ("example.com." and
+  # "example.com" are the same zone)
+  zone = trimsuffix(var.root_domain, ".")
+
   # One entry per record in the input, with the parts of its key split out:
   # "_acme-challenge.TXT" -> prefix "_acme-challenge", kind "TXT"
   entries = flatten([
@@ -38,9 +42,9 @@ locals {
   # case (comparisons). For base names, record names, allowed_cname_conflicts.
   qualified = {
     for n in distinct(concat(keys(var.records), local.entry_names, var.allowed_cname_conflicts)) : n => (
-      trimsuffix(n, ".") == "@" ? var.root_domain :
-      lower(trimsuffix(n, ".")) == lower(var.root_domain) || endswith(lower(trimsuffix(n, ".")), ".${lower(var.root_domain)}") ? trimsuffix(n, ".") :
-      "${trimsuffix(n, ".")}.${var.root_domain}"
+      trimsuffix(n, ".") == "@" ? local.zone :
+      lower(trimsuffix(n, ".")) == lower(local.zone) || endswith(lower(trimsuffix(n, ".")), ".${lower(local.zone)}") ? trimsuffix(n, ".") :
+      "${trimsuffix(n, ".")}.${local.zone}"
     )
   }
   fqdn = { for n, q in local.qualified : n => lower(q) }

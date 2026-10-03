@@ -26,7 +26,7 @@ locals {
   by_name = { for r in local.records : r.fqdn => r... }
   cname_shared = [
     for name, group in local.by_name : name
-    if name != lower(var.root_domain) && anytrue([for r in group : r.type == "CNAME"]) && anytrue([for r in group : r.type != "CNAME"])
+    if name != lower(local.zone) && anytrue([for r in group : r.type == "CNAME"]) && anytrue([for r in group : r.type != "CNAME"])
   ]
   allowed_cname_conflicts = distinct([for n in var.allowed_cname_conflicts : local.fqdn[n]])
   cname_conflicts = [
@@ -52,7 +52,7 @@ locals {
   combined_names = concat(
     [for i, e in local.entries : { name = local.entry_names[i], source = e.source }],
     [
-      for e in local.entries : { name = "${e.prefix}.${e.base_name == "@" ? var.root_domain : e.base_name}", source = "${e.source} (alias target)" }
+      for e in local.entries : { name = "${e.prefix}.${e.base_name == "@" ? local.zone : e.base_name}", source = "${e.source} (alias target)" }
       if e.kind == "ALIASES" && e.prefix != null
     ],
   )
@@ -68,8 +68,8 @@ locals {
     # Terraform 1.8 evaluates both sides of &&, and records of other types may have no content
     if r.type == "CNAME" && contains([
       lower(trimsuffix((r.content == null ? "" : r.content), ".")),
-      "${lower(trimsuffix((r.content == null ? "" : r.content), "."))}.${lower(var.root_domain)}",
-      trimsuffix((r.content == null ? "" : r.content), ".") == "@" ? lower(var.root_domain) : "",
+      "${lower(trimsuffix((r.content == null ? "" : r.content), "."))}.${lower(local.zone)}",
+      trimsuffix((r.content == null ? "" : r.content), ".") == "@" ? lower(local.zone) : "",
     ], r.fqdn)
   ]
 
