@@ -47,7 +47,8 @@ jobs:
           (cd dist && sha256sum "${full}" "${v5}" >SHA256SUMS)
 
       # Signed SLSA build provenance of the archives, checked with
-      # gh attestation verify <archive> --repo i386dev/terraform-cloudflare-easy-dns
+      # gh attestation verify <archive> --repo i386dev/terraform-cloudflare-easy-dns \
+      #   --signer-workflow i386dev/terraform-cloudflare-easy-dns/.github/workflows/release.yml
       - name: Attest build provenance
         uses: actions/attest@v4
         with:

@@ -133,7 +133,9 @@ ARCHIVE="terraform-cloudflare-easy-dns-${VERSION}.tar.gz"
 curl -fsSL -O "${REPO}/releases/download/${VERSION}/${ARCHIVE}"
 curl -fsSL -O "${REPO}/releases/download/${VERSION}/SHA256SUMS"
 sha256sum --check --ignore-missing SHA256SUMS   # macOS: shasum -a 256 --check
-gh attestation verify "${ARCHIVE}" --repo i386dev/terraform-cloudflare-easy-dns   # optional, from 2.9.0
+# Optional, from 2.9.0: the archive was built by the release workflow of this repository
+gh attestation verify "${ARCHIVE}" --repo i386dev/terraform-cloudflare-easy-dns \
+  --signer-workflow i386dev/terraform-cloudflare-easy-dns/.github/workflows/release.yml
 mkdir -p modules/easy-dns
 tar -xzf "${ARCHIVE}" -C modules/easy-dns
 ```

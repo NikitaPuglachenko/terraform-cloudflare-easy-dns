@@ -7,7 +7,7 @@ All notable changes to this project are documented in this file. The format is b
 ### Added
 
 - `import_duplicates` output (root module, v5 wrapper): records that match several existing records in the zone when `import_existing` is set, keyed by record key, with the Cloudflare IDs of the matches. These records are not imported, and `plan` shows a warning listing them
-- Release archives have signed build provenance (`gh attestation verify <archive> --repo i386dev/terraform-cloudflare-easy-dns`)
+- Release archives have signed build provenance (`gh attestation verify <archive> --repo i386dev/terraform-cloudflare-easy-dns --signer-workflow i386dev/terraform-cloudflare-easy-dns/.github/workflows/release.yml`)
 
 ### Changed
 
