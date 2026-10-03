@@ -275,6 +275,96 @@ run "srv_unknown_field" {
   expect_failures = [var.records]
 }
 
+run "data_hostnames" {
+  command = plan
+
+  variables {
+    records = {
+      "_sip._tcp"  = { SRV = [{ data = { priority = 0, weight = 0, port = 0, target = "." } }, { data = { priority = 10, weight = 5, port = 5060, target = "SIP.example.com." } }] }
+      "@"          = { HTTPS = [{ data = { priority = 0, target = "cdn.example.net" } }] }
+      "_dns"       = { SVCB = [{ data = { priority = 1, target = "_dns.resolver.example.net." } }] }
+      "sip"        = { NAPTR = [{ data = { order = 100, preference = 10, flags = "S", service = "SIP+D2U", replacement = "_sip._udp.example.com." } }] }
+      "_ftp._tcp"  = { URI = [{ priority = 10, data = { weight = 1, target = "ftp://ftp.example.com/" } }] }
+      "_xmpp._tcp" = { SRV = [{ data = { priority = 10, weight = 5, port = 5222, target = "xmpp" } }] }
+    }
+  }
+
+  assert {
+    condition     = length(output.flat_records) == 7
+    error_message = "Hostnames, \".\" and short names are valid targets; URI targets are URIs and not checked as hostnames"
+  }
+}
+
+run "srv_target_invalid" {
+  command = plan
+
+  variables {
+    records = { "_sip._tcp" = { SRV = [{ data = { priority = 10, weight = 5, port = 5060, target = "sip server.example.com" } }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "srv_target_ip" {
+  command = plan
+
+  variables {
+    records = { "_sip._tcp" = { SRV = [{ data = { priority = 10, weight = 5, port = 5060, target = "192.0.2.10" } }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "srv_target_null" {
+  command = plan
+
+  variables {
+    records = { "_sip._tcp" = { SRV = [{ data = { priority = 10, weight = 5, port = 5060, target = null } }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "https_target_at" {
+  command = plan
+
+  variables {
+    records = { "@" = { HTTPS = [{ data = { priority = 1, target = "@" } }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "svcb_target_url" {
+  command = plan
+
+  variables {
+    records = { "_dns" = { SVCB = [{ data = { priority = 1, target = "https://resolver.example.net/" } }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "naptr_replacement_wildcard" {
+  command = plan
+
+  variables {
+    records = { "sip" = { NAPTR = [{ data = { order = 100, preference = 10, replacement = "*.example.com" } }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "srv_target_too_long" {
+  command = plan
+
+  variables {
+    records = { "_sip._tcp" = { SRV = [{ data = { priority = 10, weight = 5, port = 5060, target = join(".", [for i in range(5) : "a${join("", [for j in range(60) : "b"])}"]) } }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
 run "uri_without_priority" {
   command = plan
 

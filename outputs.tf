@@ -17,3 +17,8 @@ output "import_ids" {
   description = "Import IDs (<zone_id>/<record_id>) of records that already exist in the zone, keyed by record key. Empty unless import_existing is true; records with no or several matches are left out"
   value       = module.v5.import_ids
 }
+
+output "import_duplicates" {
+  description = "Cloudflare record IDs of existing records that match the same configured record (duplicates in the zone), keyed by record key. Empty unless import_existing is true; these records are not imported, remove the duplicates from the zone first"
+  value       = module.v5.import_duplicates
+}

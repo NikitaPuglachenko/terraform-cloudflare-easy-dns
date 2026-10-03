@@ -82,4 +82,15 @@ locals {
     for key, ids in local.import_matches : key => ids[0]
     if length(ids) == 1
   }
+  import_duplicates = {
+    for key, ids in local.import_matches : key => ids
+    if length(ids) > 1
+  }
+}
+
+check "import_duplicates" {
+  assert {
+    condition     = length(local.import_duplicates) == 0
+    error_message = "Records that match several existing records are not imported and would be created again; remove the duplicates from the zone (see the import_duplicates output):\n${join("\n", [for key, ids in local.import_duplicates : "\"${key}\": ${join(", ", ids)}"])}"
+  }
 }

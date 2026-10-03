@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- `import_duplicates` output (root module, v5 wrapper): records that match several existing records in the zone when `import_existing` is set, keyed by record key, with the Cloudflare IDs of the matches. These records are not imported, and `plan` shows a warning listing them
+- Release archives have signed build provenance (`gh attestation verify <archive> --repo i386dev/terraform-cloudflare-easy-dns --signer-workflow i386dev/terraform-cloudflare-easy-dns/.github/workflows/release.yml`)
+
+### Changed
+
+- `target` of `SRV`, `HTTPS` and `SVCB` records and `replacement` of `NAPTR` records are validated as hostnames, like `CNAME`, `MX`, `NS` and `PTR` values, or `.`; values with spaces, invalid characters, an IP address or `@` fail at `plan` instead of at the Cloudflare API
+
 ## [2.8.2] - 2026-10-03
 
 ### Fixed

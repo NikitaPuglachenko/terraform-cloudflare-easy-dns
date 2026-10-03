@@ -133,6 +133,9 @@ ARCHIVE="terraform-cloudflare-easy-dns-${VERSION}.tar.gz"
 curl -fsSL -O "${REPO}/releases/download/${VERSION}/${ARCHIVE}"
 curl -fsSL -O "${REPO}/releases/download/${VERSION}/SHA256SUMS"
 sha256sum --check --ignore-missing SHA256SUMS   # macOS: shasum -a 256 --check
+# Optional, from 2.9.0: the archive was built by the release workflow of this repository
+gh attestation verify "${ARCHIVE}" --repo i386dev/terraform-cloudflare-easy-dns \
+  --signer-workflow i386dev/terraform-cloudflare-easy-dns/.github/workflows/release.yml
 mkdir -p modules/easy-dns
 tar -xzf "${ARCHIVE}" -C modules/easy-dns
 ```
@@ -373,6 +376,7 @@ The `records` input is validated before any API call. The module checks the stru
 - Only `A`, `AAAA`, `CNAME` and `ALIASES` records can be `proxied`
 - `MX` and `URI` records require `priority`
 - `A` records need an IPv4 address and `AAAA` records an IPv6 address; `CNAME`, `MX`, `NS` and `PTR` records need a hostname: labels of letters, digits, `_` and `-` (up to 63 characters) separated by dots, at most 253 characters, an optional trailing dot, and not an IP address (`@` stands for the zone apex, and `.` is a null `MX`, RFC 7505)
+- `target` of `SRV`, `HTTPS` and `SVCB` records and `replacement` of `NAPTR` records must be a hostname by the same rule, or `.` (no service for `SRV`, the owner name for `HTTPS` and `SVCB`, no replacement for `NAPTR`). `@` is not accepted there: the module passes `data` to Cloudflare as written. `URI` targets are URIs and are not checked
 - `TXT` values are limited to 2048 characters
 - Names, prefixes and `ALIASES` must be valid DNS names: labels of letters, digits, `_` and `-` separated by dots. Internationalized names must be given in Punycode (`xn--mnchen-3ya` for `münchen`), as the Cloudflare API expects them
 - A wildcard `*` must be the whole leftmost label, also in the names a prefix and a base name combine into (`"_acme-challenge.TXT"` under `"*"` would give `_acme-challenge.*`) and in the targets of `<prefix>.ALIASES`
@@ -450,6 +454,7 @@ Cloudflare supports record tags only on some plans and limits the length of comm
 - `records`: managed records keyed by their [record key](#record-keys), with `id`, `name`, `type` and `content`
 - `state_migration`: map of the record keys used by 1.x to the current ones, see [Upgrading from v1](#from-v1-to-v2)
 - `import_ids` (v5): import IDs of records that already exist in the zone, see [Importing Existing Records](#importing-existing-records)
+- `import_duplicates` (v5): records that match several existing records in the zone, with the IDs of the matches; they are not imported
 
 ## Records in YAML
 
@@ -591,7 +596,7 @@ Each lookup reads up to 10,000 records of one type; in a zone with more records 
 
 For structured records (`SRV`, `HTTPS`, `TLSA`, ...), provider v5 plans a one-time in-place update right after the import, without visible changes; after the `apply`, the plan is empty.
 
-Matching ignores the case and a trailing dot of names, hostnames (`target`, `replacement`, the issuer domain of CAA `issue`/`issuewild` values) and hex values (`digest`, `fingerprint`, and `certificate` of TLSA and SMIMEA records); other `data` fields, CAA parameters after `;`, `iodef` URLs and OPENPGPKEY keys must match exactly. TXT values are compared without the split into quoted chunks; a value in the zone file form (`"v=spf1 \"a\" -all"`) is compared without its surrounding quotes and escapes, since Cloudflare stores TXT content as it was sent and `v=spf1 "a" -all` is the same DNS record; quotes inside the value count. A TXT record stored in the quoted form and configured without quotes gets a one-time in-place update to the configured form after the import (the DNS answer does not change). A record is imported only when exactly one existing record matches it: when the zone has several identical records, the record is not imported and `plan` shows it as created, so the duplicates can be cleaned up first.
+Matching ignores the case and a trailing dot of names, hostnames (`target`, `replacement`, the issuer domain of CAA `issue`/`issuewild` values) and hex values (`digest`, `fingerprint`, and `certificate` of TLSA and SMIMEA records); other `data` fields, CAA parameters after `;`, `iodef` URLs and OPENPGPKEY keys must match exactly. TXT values are compared without the split into quoted chunks; a value in the zone file form (`"v=spf1 \"a\" -all"`) is compared without its surrounding quotes and escapes, since Cloudflare stores TXT content as it was sent and `v=spf1 "a" -all` is the same DNS record; quotes inside the value count. A TXT record stored in the quoted form and configured without quotes gets a one-time in-place update to the configured form after the import (the DNS answer does not change). A record is imported only when exactly one existing record matches it: when the zone has several identical records, the record is not imported and `plan` shows it as created, so the duplicates can be cleaned up first. Such records are listed in the `import_duplicates` output with the IDs of all their matches, and `plan` shows a warning with the same list; [`examples/import`](https://github.com/i386dev/terraform-cloudflare-easy-dns/tree/main/examples/import) passes the output through so it shows up in `plan`.
 
 ## Upgrading and Migration
 

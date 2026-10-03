@@ -278,6 +278,33 @@ variable "records" {
     ]))
     error_message = "A records need an IPv4 address and AAAA records an IPv6 address; CNAME, MX, NS and PTR records need a DNS name (labels of letters, digits, '_' and '-' up to 63 characters, at most 253 in total, not an IP address; \"@\" for the zone apex, \".\" for a null MX); TXT values are limited to 2048 characters."
   }
+
+  # Hostnames in data, with the same rule as CNAME, MX, NS and PTR values. "." is the
+  # root: no service for SRV (RFC 2782), the owner name for HTTPS and SVCB (RFC 9460),
+  # no replacement for NAPTR (RFC 3403). data is passed to Cloudflare as written, so "@"
+  # is not accepted here
+  validation {
+    condition = alltrue(flatten([
+      for base_name, type_map in var.records : [
+        for raw_key, recs in type_map : [
+          # A null value becomes "" (invalid): Terraform 1.8 evaluates both sides of ||
+          for rec in recs : [
+            for raw in [lookup(coalesce(rec.data, {}), element(split(".", raw_key), length(split(".", raw_key)) - 1) == "NAPTR" ? "replacement" : "target", ".")] : [
+              for value in [raw == null ? "" : raw] : (
+                value == "."
+                || (
+                  length(trimsuffix(value, ".")) <= 253
+                  && can(regex("^[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.?$", value))
+                  && !can(cidrhost("${trimsuffix(value, ".")}/32", 0))
+                )
+              )
+            ]
+          ]
+        ] if contains(["SRV", "HTTPS", "SVCB", "NAPTR"], element(split(".", raw_key), length(split(".", raw_key)) - 1))
+      ]
+    ]))
+    error_message = "SRV, HTTPS and SVCB targets and NAPTR replacements must be a DNS name (labels of letters, digits, '_' and '-' up to 63 characters, at most 253 in total, not an IP address) or \".\"."
+  }
 }
 
 variable "existing_records" {
