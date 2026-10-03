@@ -152,3 +152,17 @@ run "names_in_lower_case_and_allowed_cname_conflicts" {
     error_message = "The resource gets the name in lower case, and the listed CNAME conflict is accepted"
   }
 }
+
+run "minimum_ttl_passed_to_the_core" {
+  command = plan
+
+  variables {
+    minimum_ttl = 30
+    records     = { "fast" = { A = [{ content = "192.0.2.9", ttl = 30 }] } }
+  }
+
+  assert {
+    condition     = cloudflare_record.record["fast A 192.0.2.9"].ttl == 30
+    error_message = "minimum_ttl must reach the core module"
+  }
+}

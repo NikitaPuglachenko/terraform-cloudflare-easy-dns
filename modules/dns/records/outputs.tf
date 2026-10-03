@@ -8,6 +8,11 @@ output "flat_records" {
   }
 
   precondition {
+    condition     = length(local.low_ttls) == 0
+    error_message = "TTLs below ${var.minimum_ttl} seconds are only available on the Cloudflare Enterprise plan. If this zone is on Enterprise, set minimum_ttl = 30 in the module call; otherwise use a TTL of at least 60 seconds, or 1 for automatic:\n${join("\n", local.low_ttls)}"
+  }
+
+  precondition {
     condition     = length(local.cname_conflicts) == 0
     error_message = "A CNAME record cannot share its name with other records (except at the zone apex), and a name has at most one CNAME. Names that already have a CNAME next to other records in the zone can be listed in allowed_cname_conflicts:\n${join("\n", local.cname_conflicts)}"
   }

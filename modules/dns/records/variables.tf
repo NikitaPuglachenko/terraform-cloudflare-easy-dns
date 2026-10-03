@@ -32,6 +32,18 @@ variable "default_tags" {
   default     = []
 }
 
+variable "minimum_ttl" {
+  description = "Lowest TTL other than 1 (automatic): 60 seconds on every Cloudflare plan, 30 only on Enterprise zones"
+  type        = number
+  default     = 60
+  nullable    = false
+
+  validation {
+    condition     = contains([30, 60], var.minimum_ttl)
+    error_message = "minimum_ttl must be 60, or 30 for zones on the Cloudflare Enterprise plan."
+  }
+}
+
 variable "allowed_cname_conflicts" {
   description = "Names where a CNAME may share its name with other records, for existing zones that have such names (Cloudflare accepts them for records that are not proxied). Compared fully qualified and case-insensitively; a second CNAME on a name still fails"
   type        = list(string)

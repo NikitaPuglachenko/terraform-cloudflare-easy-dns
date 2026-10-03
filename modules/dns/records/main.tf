@@ -153,6 +153,13 @@ locals {
     if length([for r in group : r if r.type == "CNAME"]) > 1
     || (contains(local.cname_shared, name) && !contains(local.allowed_cname_conflicts, name))
   ]
+  # TTLs below minimum_ttl (records that are not proxied; 1 means automatic). The
+  # plan is not known here, so a zone on Enterprise opts in with minimum_ttl = 30
+  low_ttls = [
+    for r in local.records : "\"${r.key}\" (ttl ${r.ttl}) from ${r.source}"
+    if !r.proxied && r.ttl != 1 && r.ttl < var.minimum_ttl
+  ]
+
   # Listed names that no longer have a conflict, so the list does not keep growing
   unused_allowed_cname_conflicts = [for n in local.allowed_cname_conflicts : n if !contains(local.cname_shared, n)]
 

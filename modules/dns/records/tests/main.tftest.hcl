@@ -754,3 +754,56 @@ run "null_mx_only_for_mx" {
   }
   expect_failures = [var.records]
 }
+
+run "ttl_below_60_without_enterprise" {
+  command = plan
+  variables {
+    records = { "app" = { A = [{ content = "192.0.2.1", ttl = 45 }] } }
+  }
+  expect_failures = [output.flat_records]
+}
+
+run "default_ttl_below_60_without_enterprise" {
+  command = plan
+  variables {
+    default_ttl = 30
+    records     = { "app" = { A = [{ content = "192.0.2.1" }] } }
+  }
+  expect_failures = [output.flat_records]
+}
+
+run "ttl_below_60_on_enterprise" {
+  command = plan
+  variables {
+    minimum_ttl = 30
+    records     = { "app" = { A = [{ content = "192.0.2.1", ttl = 30 }], TXT = [{ content = "x", ttl = 45 }] } }
+  }
+  assert {
+    condition     = output.flat_records["app A 192.0.2.1"].ttl == 30
+    error_message = "minimum_ttl = 30 allows TTLs from 30 seconds"
+  }
+}
+
+run "ttl_automatic_and_proxied" {
+  command = plan
+  variables {
+    default_ttl = 1
+    records = {
+      "app" = { A = [{ content = "192.0.2.1" }] }
+      "web" = { A = [{ content = "192.0.2.2", proxied = true, ttl = 300 }] }
+    }
+  }
+  assert {
+    condition     = output.flat_records["app A 192.0.2.1"].ttl == 1
+    error_message = "TTL 1 (automatic) and proxied records are not affected by minimum_ttl"
+  }
+}
+
+run "minimum_ttl_only_30_or_60" {
+  command = plan
+  variables {
+    minimum_ttl = 45
+    records     = { "app" = { A = [{ content = "192.0.2.1" }] } }
+  }
+  expect_failures = [var.minimum_ttl]
+}
