@@ -123,11 +123,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
       - run: pip install --quiet jsonschema pyyaml
       - run: python3 scripts/generate-schema.py
       - name: Check that the schema is up to date
         run: git diff --exit-code schema/ || { echo "The schema is outdated, run scripts/generate-schema.py"; exit 1; }
-      - run: python3 scripts/test-schema.py examples/yaml/records.easy-dns.yaml
+      # The same documents through the module: the schema and the validation must agree
+      - run: python3 scripts/test-schema.py --terraform examples/yaml/records.easy-dns.yaml
 
   tflint:
     name: TFLint
