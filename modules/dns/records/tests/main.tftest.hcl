@@ -807,3 +807,116 @@ run "minimum_ttl_only_30_or_60" {
   }
   expect_failures = [var.minimum_ttl]
 }
+
+run "wildcard_valid_names" {
+  command = plan
+
+  variables {
+    records = {
+      "*"     = { A = [{ content = "192.0.2.1" }] }
+      "*.app" = { A = [{ content = "192.0.2.2" }], ALIASES = [{ content = "legacy" }] }
+      "app"   = { "_acme-challenge.TXT" = [{ content = "token" }] }
+    }
+  }
+
+  assert {
+    condition     = length(output.flat_records) == 4
+    error_message = "A wildcard as the whole leftmost label is valid"
+  }
+}
+
+run "wildcard_under_a_prefix" {
+  command = plan
+  variables {
+    records = { "*" = { "_acme-challenge.TXT" = [{ content = "token" }] } }
+  }
+  expect_failures = [output.flat_records]
+}
+
+run "wildcard_in_the_middle_after_combining" {
+  command = plan
+  variables {
+    records = { "*.app" = { "x.A" = [{ content = "192.0.2.1" }] } }
+  }
+  expect_failures = [output.flat_records]
+}
+
+run "wildcard_in_an_inline_alias_target" {
+  command = plan
+  variables {
+    records = { "*.app" = { "cdn.ALIASES" = [{ content = "static" }] } }
+  }
+  expect_failures = [output.flat_records]
+}
+
+run "self_alias" {
+  command = plan
+  variables {
+    records = { "app" = { ALIASES = [{ content = "app" }] } }
+  }
+  expect_failures = [output.flat_records]
+}
+
+run "self_cname_fully_qualified" {
+  command = plan
+  variables {
+    records = { "www" = { CNAME = [{ content = "WWW.example.com." }] } }
+  }
+  expect_failures = [output.flat_records]
+}
+
+run "self_cname_short" {
+  command = plan
+  variables {
+    records = { "www" = { CNAME = [{ content = "www" }] } }
+  }
+  expect_failures = [output.flat_records]
+}
+
+run "self_cname_apex" {
+  command = plan
+  variables {
+    records = { "@" = { CNAME = [{ content = "@" }] } }
+  }
+  expect_failures = [output.flat_records]
+}
+
+run "cname_to_another_name" {
+  command = plan
+
+  variables {
+    records = {
+      "www" = { CNAME = [{ content = "app.example.com" }] }
+      "@"   = { CNAME = [{ content = "lb.example.net" }] }
+    }
+  }
+
+  assert {
+    condition     = length(output.flat_records) == 2
+    error_message = "A CNAME to another name is fine"
+  }
+}
+
+run "default_ttl_below_minimum_even_if_unused" {
+  command = plan
+  variables {
+    default_ttl = 30
+    records     = { "app" = { A = [{ content = "192.0.2.1", ttl = 300 }] } }
+  }
+  expect_failures = [output.flat_records]
+}
+
+run "default_ttl_30_on_enterprise" {
+  command = plan
+
+  variables {
+    default_ttl = 30
+    minimum_ttl = 30
+    records     = { "app" = { A = [{ content = "192.0.2.1" }] } }
+  }
+
+  assert {
+    condition     = output.flat_records["app A 192.0.2.1"].ttl == 30
+    error_message = "default_ttl 30 is fine with minimum_ttl = 30"
+  }
+}

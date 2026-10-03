@@ -258,7 +258,7 @@ variable "records" {
           for rec in recs : (
             element(split(".", raw_key), length(split(".", raw_key)) - 1) == "A" ? can(cidrhost("${coalesce(rec.content, "x")}/32", 0)) && !strcontains(coalesce(rec.content, "x"), ":") :
             element(split(".", raw_key), length(split(".", raw_key)) - 1) == "AAAA" ? can(cidrhost("${coalesce(rec.content, "x")}/128", 0)) && strcontains(coalesce(rec.content, "x"), ":") :
-            # Hostnames: labels of letters, digits, '_' and '-' (up to 63 characters)
+            # DNS names: labels of letters, digits, '_' and '-' (up to 63 characters)
             # separated by dots, at most 253 characters, an optional trailing dot; not an
             # IP address. "@" is the zone apex, and "." is a null MX (RFC 7505).
             contains(["CNAME", "MX", "NS", "PTR"], element(split(".", raw_key), length(split(".", raw_key)) - 1)) ? (
@@ -276,7 +276,7 @@ variable "records" {
         ]
       ]
     ]))
-    error_message = "A records need an IPv4 address and AAAA records an IPv6 address; CNAME, MX, NS and PTR records need a hostname (labels of letters, digits, '_' and '-' up to 63 characters, at most 253 in total, not an IP address; \"@\" for the zone apex, \".\" for a null MX); TXT values are limited to 2048 characters."
+    error_message = "A records need an IPv4 address and AAAA records an IPv6 address; CNAME, MX, NS and PTR records need a DNS name (labels of letters, digits, '_' and '-' up to 63 characters, at most 253 in total, not an IP address; \"@\" for the zone apex, \".\" for a null MX); TXT values are limited to 2048 characters."
   }
 }
 
