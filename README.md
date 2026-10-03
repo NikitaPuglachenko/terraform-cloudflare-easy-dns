@@ -372,6 +372,17 @@ MX = [
 
 Names are sent to Cloudflare in lower case, as Cloudflare stores them; the key keeps the name as written (`M1._domainkey TXT dkim`).
 
+**Rewriting a name in another form changes its key.** `www`, `WWW` and `www.example.com` are the same DNS name, but the key keeps the form as written, so changing it (`www` to `www.example.com`, or `WWW` to `www`) gives the record a new address, and Terraform plans to delete and create it. To keep the existing record, add a `moved` block with the old and the new key, then check that the plan neither deletes nor creates it:
+
+```hcl
+moved {
+  from = module.dns.module.v5.cloudflare_dns_record.record["www A 192.0.2.10"]
+  to   = module.dns.module.v5.cloudflare_dns_record.record["www.example.com A 192.0.2.10"]
+}
+```
+
+With the `//modules/dns/v5` submodule, the address has no `module.v5`; with the v4 wrapper, the resource is `cloudflare_record.record`.
+
 ## Validation
 
 The `records` input is validated before any API call. The module checks the structure and invariants that hold for every zone; protocol-specific values (SRV port ranges, DNSKEY algorithms, LOC coordinates, ...) are left to the Cloudflare API:

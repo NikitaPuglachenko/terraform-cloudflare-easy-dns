@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Changed
+
+- README: rewriting a record name in another form (`www` to `www.example.com`, `WWW` to `www`) changes its key and recreates the record unless a `moved` block keeps it
+
 ## [2.10.1] - 2026-10-03
 
 ### Fixed
