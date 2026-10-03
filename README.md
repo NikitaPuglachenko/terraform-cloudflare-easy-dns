@@ -118,7 +118,7 @@ A copy in your repository needs neither GitHub nor the Terraform Registry to get
 
 ```sh
 REPO=https://github.com/i386dev/terraform-cloudflare-easy-dns
-VERSION=v2.8.0
+VERSION=v2.8.1
 ARCHIVE="terraform-cloudflare-easy-dns-${VERSION}.tar.gz"
 curl -fsSL -O "${REPO}/releases/download/${VERSION}/${ARCHIVE}"
 curl -fsSL -O "${REPO}/releases/download/${VERSION}/SHA256SUMS"
@@ -151,10 +151,10 @@ What a copy may change without affecting the module:
 To fetch the module on `terraform init` instead, use a Git source with a tag (or the URL of your own mirror):
 
 ```hcl
-source = "git::https://github.com/i386dev/terraform-cloudflare-easy-dns.git?ref=v2.8.0"
+source = "git::https://github.com/i386dev/terraform-cloudflare-easy-dns.git?ref=v2.8.1"
 ```
 
-For provider v4, add `//modules/dns/v4` before `?ref=`.
+For provider v4, add `//modules/dns/v4` before `?ref=`. In CI, where every run starts from a clean checkout, add `&depth=1` after the tag (`?ref=v2.8.1&depth=1`) to fetch only that commit instead of the whole history.
 
 ### HCL or YAML
 
@@ -319,6 +319,14 @@ Since the value is a part of the key, changing it replaces the record. For value
 ]
 ```
 
+**Values computed by other resources need a `key`.** `for_each` keys must be known at `plan`, so a record whose value comes from another resource (`content = aws_instance.web.public_ip`) fails with "The "for_each" value depends on resource attributes that cannot be determined until apply" unless it has a `key`:
+
+```hcl
+"web" = {
+  A = [{ key = "web", content = aws_instance.web.public_ip }]
+}
+```
+
 Two records that produce the same key (e.g. the same value listed twice, or a `CNAME` and an alias with the same name) fail at `plan` with the list of duplicates and where each of them is defined. `MX` records that differ only in `priority` and `CAA` records that differ only in `flags` get the same key too, since neither is a part of it; give each of them a `key`:
 
 ```hcl
@@ -450,9 +458,34 @@ See [`examples/yaml`](https://github.com/i386dev/terraform-cloudflare-easy-dns/t
 
 Use the schema of the module version you use. For records written in HCL, there is no such completion (see [HCL or YAML](#hcl-or-yaml)); mistakes are reported at `plan`.
 
+**Quote text values.** `yamldecode` follows YAML 1.1, where unquoted `off`, `on`, `yes`, `no`, `N` and `Y` are booleans and `0123` or `1.10` are numbers; Terraform would turn them into `"false"`, `"123"` or `"1.1"` without an error. The module rejects booleans in `content`, `key`, `comment` and `tag`, and warns about numbers there. Quoted, they stay as written:
+
+```yaml
+TXT:
+  - content: "off"     # not: content: off  ->  "false"
+  - content: "0123"    # not: content: 0123 ->  "123"
+```
+
 `yamldecode` follows YAML 1.1, where unquoted `yes`, `no`, `on`, `off`, `y` and `n` (in any case) are booleans; quote such values, e.g. `content: "on"`. The module accepts the unquoted `N` of a LOC `lat_direction`.
 
 ## Recipes
+
+### A Record Type or Field the Module Does Not Support
+
+Record types and attributes are a closed list, so misspelled ones fail at `plan`. When Cloudflare adds something the module does not know yet, manage that record with the provider resource next to the module call, in the same zone:
+
+```hcl
+resource "cloudflare_dns_record" "special" {
+  zone_id = var.zone_id
+  name    = "special"
+  type    = "TXT"
+  content = "..."
+  ttl     = 1
+  # any argument the provider supports
+}
+```
+
+Keep it out of `records`, so the record is not managed twice. Once the module supports it, move it into `records` with a `moved` block to its key.
 
 Mail with SPF, DKIM and DMARC; the DKIM record has a `key`, so rotating the key updates the record in place:
 
