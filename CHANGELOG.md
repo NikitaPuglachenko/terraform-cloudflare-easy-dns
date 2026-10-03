@@ -4,6 +4,19 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.8.2] - 2026-10-03
+
+### Fixed
+
+- A wildcard could end up outside the leftmost label when names combine: a prefix under a wildcard base name (`"_acme-challenge.TXT"` under `"*"` gave `_acme-challenge.*`, `"x.A"` under `"*.app"` gave `x.*.app`) and the target of `<prefix>.ALIASES` under a wildcard base name; such names now fail at `plan`
+- A `CNAME` or alias pointing to its own name (`"app" = { ALIASES = [{ content = "app" }] }`, `www CNAME www.example.com.`, `@ CNAME @`) fails at `plan`
+- A `default_ttl` below `minimum_ttl` fails at `plan` also when no record uses it
+
+### Changed
+
+- Error messages say "DNS name" instead of "hostname" for `CNAME`, `MX`, `NS` and `PTR` values
+- README: a table of the `records` keys up front; `zone_name` must match `zone_id` (the module cannot check it); when to use `key`; `import_existing` only finds IDs and reads up to 10,000 records per type; Punycode for internationalized names; `allowed_cname_conflicts` as a migration escape hatch; what the validation covers and what it leaves to the API; "Structured Records" instead of "All Record Types"
+
 ## [2.8.1] - 2026-10-03
 
 ### Fixed
@@ -222,7 +235,8 @@ All notable changes to this project are documented in this file. The format is b
 - Inline aliases pointed to a relative name instead of the full hostname
 - Zone apex (`@`) handling for aliases and nested names
 
-[Unreleased]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.8.1...HEAD
+[Unreleased]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.8.2...HEAD
+[2.8.2]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.8.1...v2.8.2
 [2.8.1]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.8.0...v2.8.1
 [2.8.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.4...v2.7.0
