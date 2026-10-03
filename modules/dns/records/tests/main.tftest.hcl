@@ -693,6 +693,34 @@ run "two_cnames_on_a_listed_name" {
   expect_failures = [output.flat_records]
 }
 
+run "allowed_cname_conflicts_invalid_name" {
+  command = plan
+
+  variables {
+    records                 = { "community" = { CNAME = [{ content = "target.example.net" }] } }
+    allowed_cname_conflicts = ["community", "foo..bar", "with space"]
+  }
+
+  expect_failures = [var.allowed_cname_conflicts]
+}
+
+run "allowed_cname_conflicts_name_forms" {
+  command = plan
+
+  variables {
+    records = {
+      "community" = { CNAME = [{ content = "target.example.net" }], TXT = [{ content = "x" }] }
+      "@"         = { TXT = [{ content = "y" }] }
+    }
+    allowed_cname_conflicts = ["Community.Example.com."]
+  }
+
+  assert {
+    condition     = length(output.flat_records) == 3
+    error_message = "A listed name may be fully qualified, in any case, with a trailing dot"
+  }
+}
+
 run "allowed_cname_conflict_unused" {
   command = plan
 

@@ -266,3 +266,51 @@ run "unicode_target" {
 
   expect_failures = [var.records]
 }
+
+# The zone name may be given with a trailing dot, as in zone files: same names
+run "root_domain_with_a_trailing_dot" {
+  command = plan
+
+  variables {
+    root_domain = "example.com."
+  }
+
+  assert {
+    condition     = { for k, r in output.flat_records : r.content => r.fqdn } == { for k, r in run.forms.flat_records : r.content => r.fqdn }
+    error_message = "A trailing dot of the zone name must not change any name"
+  }
+}
+
+run "aliases_with_root_domain_with_a_trailing_dot" {
+  command = plan
+
+  variables {
+    root_domain = "example.com."
+    records     = { "@" = { ALIASES = [{ content = "www" }] }, "app" = { "cdn.ALIASES" = [{ content = "static" }] } }
+  }
+
+  assert {
+    condition     = output.flat_records["www CNAME"].content == "example.com" && output.flat_records["static CNAME"].content == "cdn.app.example.com"
+    error_message = "Alias targets have no trailing dot from the zone name"
+  }
+}
+
+run "invalid_root_domain" {
+  command = plan
+
+  variables {
+    root_domain = "example com"
+  }
+
+  expect_failures = [var.root_domain]
+}
+
+run "empty_root_domain" {
+  command = plan
+
+  variables {
+    root_domain = ""
+  }
+
+  expect_failures = [var.root_domain]
+}

@@ -1,6 +1,11 @@
 variable "root_domain" {
-  description = "Zone domain name (e.g. example.com), used as the target suffix for aliases"
+  description = "Zone domain name (e.g. example.com), used as the target suffix for aliases. A trailing dot is ignored"
   type        = string
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.?$", var.root_domain))
+    error_message = "The zone name must be a DNS name such as example.com, got ${jsonencode(var.root_domain)}."
+  }
 }
 
 variable "default_ttl" {
@@ -49,6 +54,11 @@ variable "allowed_cname_conflicts" {
   type        = list(string)
   default     = []
   nullable    = false
+
+  validation {
+    condition     = length([for n in var.allowed_cname_conflicts : n if !(n == "@" || can(regex("^(\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.?$", n)))]) == 0
+    error_message = "allowed_cname_conflicts must list names like in records (\"@\", \"www\", \"www.example.com\", \"*.legacy\"):\n${join("\n", [for n in var.allowed_cname_conflicts : jsonencode(n) if !(n == "@" || can(regex("^(\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.?$", n)))])}"
+  }
 }
 
 variable "records" {

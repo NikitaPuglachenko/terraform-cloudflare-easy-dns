@@ -4,9 +4,15 @@ variable "zone_id" {
 }
 
 variable "zone_name" {
-  description = "Zone domain name (e.g. example.com). If null, it is looked up from zone_id"
+  description = "Zone domain name (e.g. example.com). If null, it is looked up from zone_id. A trailing dot is ignored"
   type        = string
   default     = null
+
+  # Checked here: an empty name would otherwise fail in coalesce() with an unclear error
+  validation {
+    condition     = var.zone_name == null || can(regex("^[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.?$", var.zone_name))
+    error_message = "zone_name must be the DNS name of the zone, such as example.com (or null to look it up from zone_id)."
+  }
 }
 
 variable "records" {

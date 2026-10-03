@@ -219,3 +219,27 @@ run "yaml_numbers_in_text_values" {
 
   expect_failures = [check.records_text_values_are_strings]
 }
+
+run "empty_zone_name" {
+  command = plan
+
+  variables {
+    zone_name = ""
+  }
+
+  expect_failures = [var.zone_name]
+}
+
+run "zone_name_with_a_trailing_dot" {
+  command = plan
+
+  variables {
+    zone_name = "Example.com."
+    records   = { "app" = { A = [{ content = "192.0.2.1" }], ALIASES = [{ content = "www" }] }, "api.example.com" = { A = [{ content = "192.0.2.2" }] } }
+  }
+
+  assert {
+    condition     = sort([for r in values(module.records.flat_records) : r.fqdn]) == tolist(["api.example.com", "app.example.com", "www.example.com"])
+    error_message = "A trailing dot and the case of zone_name do not change the names"
+  }
+}
