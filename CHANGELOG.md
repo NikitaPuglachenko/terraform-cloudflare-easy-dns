@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.8.1] - 2026-10-03
+
+### Fixed
+
+- Unquoted YAML 1.1 booleans (`off`, `on`, `yes`, `no`, `N`, `Y`) in `content`, `key`, `comment` or `tag` were turned into `"false"`/`"true"` without an error; they now fail at `plan` with the record and a hint to quote them. Numbers there (`0123` -> `"123"`, `1.10` -> `"1.1"`) show a warning
+
+### Changed
+
+- README: values computed by other resources need a `key`; `&depth=1` for Git sources in CI; managing a record type or field the module does not support next to the module call; quoting text values in YAML
+
 ## [2.8.0] - 2026-10-03
 
 ### Changed
@@ -212,7 +222,8 @@ All notable changes to this project are documented in this file. The format is b
 - Inline aliases pointed to a relative name instead of the full hostname
 - Zone apex (`@`) handling for aliases and nested names
 
-[Unreleased]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.8.0...HEAD
+[Unreleased]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.8.1...HEAD
+[2.8.1]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.8.0...v2.8.1
 [2.8.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.4...v2.7.0
 [2.6.4]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.3...v2.6.4
