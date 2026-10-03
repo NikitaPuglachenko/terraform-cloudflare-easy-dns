@@ -14,21 +14,46 @@ locals {
           idx       = idx
           prefix    = length(split(".", raw_key)) > 1 ? join(".", slice(split(".", raw_key), 0, length(split(".", raw_key)) - 1)) : null
           kind      = element(split(".", raw_key), length(split(".", raw_key)) - 1)
-          base_fqdn = base_name == "@" ? var.root_domain : "${base_name}.${var.root_domain}"
           source    = "records[\"${base_name}\"][\"${raw_key}\"][${idx}]"
         }
       ]
     ]
   ])
 
+  # Record names as written: ALIASES name the CNAME by their content, prefixes are
+  # prepended to the base name
+  entry_names = [
+    for e in local.entries : (
+      element(split(".", e.raw_key), length(split(".", e.raw_key)) - 1) == "ALIASES" ? e.rec.content :
+      length(split(".", e.raw_key)) == 1 ? e.base_name :
+      e.base_name == "@" ? join(".", slice(split(".", e.raw_key), 0, length(split(".", e.raw_key)) - 1)) :
+      "${join(".", slice(split(".", e.raw_key), 0, length(split(".", e.raw_key)) - 1))}.${e.base_name}"
+    )
+  ]
+
+  # Every name fully qualified, in one place: "@" is the zone name, a name that
+  # already ends with the zone name is kept, any other name gets the zone name
+  # appended. qualified keeps the case as written (alias targets), fqdn is lower
+  # case (comparisons). For base names, record names, allowed_cname_conflicts.
+  qualified = {
+    for n in distinct(concat(keys(var.records), local.entry_names, var.allowed_cname_conflicts)) : n => (
+      trimsuffix(n, ".") == "@" ? var.root_domain :
+      lower(trimsuffix(n, ".")) == lower(var.root_domain) || endswith(lower(trimsuffix(n, ".")), ".${lower(var.root_domain)}") ? trimsuffix(n, ".") :
+      "${trimsuffix(n, ".")}.${var.root_domain}"
+    )
+  }
+  fqdn = { for n, q in local.qualified : n => lower(q) }
+
   # Resolved records: ALIASES become CNAMEs, prefixes are prepended to the base name
   resolved = [
-    for e in local.entries : {
-      rec     = e.rec
-      source  = e.source
-      name    = e.kind == "ALIASES" ? e.rec.content : e.prefix == null ? e.base_name : e.base_name == "@" ? e.prefix : "${e.prefix}.${e.base_name}"
-      type    = e.kind == "ALIASES" ? "CNAME" : e.kind
-      content = e.kind == "ALIASES" ? (e.prefix == null ? e.base_fqdn : "${e.prefix}.${e.base_fqdn}") : e.rec.content
+    for i, e in local.entries : {
+      rec    = e.rec
+      source = e.source
+      name   = local.entry_names[i]
+      type   = e.kind == "ALIASES" ? "CNAME" : e.kind
+      # Alias targets are the fully qualified base name, so "app" and
+      # "app.example.com" both point to app.example.com
+      content = e.kind == "ALIASES" ? (e.prefix == null ? local.qualified[e.base_name] : "${e.prefix}.${local.qualified[e.base_name]}") : e.rec.content
 
       # Key used by module versions 1.x, for state migration
       old_key = (
@@ -39,17 +64,6 @@ locals {
       )
     }
   ]
-
-  # Fully qualified, lower-case names, so "@" and the zone name, or "www" and
-  # "www.example.com", are the same name; for record names and for the names in
-  # allowed_cname_conflicts
-  fqdn = {
-    for n in distinct(concat([for r in local.resolved : r.name], var.allowed_cname_conflicts)) : n => (
-      lower(trimsuffix(n, ".")) == "@" ? lower(var.root_domain) :
-      lower(trimsuffix(n, ".")) == lower(var.root_domain) || endswith(lower(trimsuffix(n, ".")), ".${lower(var.root_domain)}") ? lower(trimsuffix(n, ".")) :
-      "${lower(trimsuffix(n, "."))}.${lower(var.root_domain)}"
-    )
-  }
 
   # Keys follow the zone file format: "<name> <TYPE> <value>"
   keyed = [
@@ -139,6 +153,13 @@ locals {
     if length([for r in group : r if r.type == "CNAME"]) > 1
     || (contains(local.cname_shared, name) && !contains(local.allowed_cname_conflicts, name))
   ]
+  # TTLs below minimum_ttl (records that are not proxied; 1 means automatic). The
+  # plan is not known here, so a zone on Enterprise opts in with minimum_ttl = 30
+  low_ttls = [
+    for r in local.records : "\"${r.key}\" (ttl ${r.ttl}) from ${r.source}"
+    if !r.proxied && r.ttl != 1 && r.ttl < var.minimum_ttl
+  ]
+
   # Listed names that no longer have a conflict, so the list does not keep growing
   unused_allowed_cname_conflicts = [for n in local.allowed_cname_conflicts : n if !contains(local.cname_shared, n)]
 
@@ -146,6 +167,7 @@ locals {
     for key, group in local.grouped : key => {
       # Cloudflare stores names in lower case; the key keeps the name as written
       name     = lower(group[0].name)
+      fqdn     = group[0].fqdn
       type     = group[0].type
       content  = group[0].content
       ttl      = group[0].ttl

@@ -56,7 +56,7 @@ locals {
     for key, rec in local.flat_records : key => [
       for e in local.existing : e.id
       if e.type == rec.type
-      && e.name == lower(rec.name == "@" ? var.root_domain : "${rec.name}.${var.root_domain}")
+      && e.name == rec.fqdn
       && (
         rec.data == null
         ? e.content == (
