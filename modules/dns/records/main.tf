@@ -184,10 +184,11 @@ locals {
   # a trailing dot, "@" and the short form ("www" on www.example.com) do not matter
   self_cnames = [
     for r in local.records : "\"${r.key}\" from ${r.source}"
+    # Terraform 1.8 evaluates both sides of &&, and records of other types may have no content
     if r.type == "CNAME" && contains([
-      lower(trimsuffix(r.content, ".")),
-      "${lower(trimsuffix(r.content, "."))}.${lower(var.root_domain)}",
-      trimsuffix(r.content, ".") == "@" ? lower(var.root_domain) : "",
+      lower(trimsuffix((r.content == null ? "" : r.content), ".")),
+      "${lower(trimsuffix((r.content == null ? "" : r.content), "."))}.${lower(var.root_domain)}",
+      trimsuffix((r.content == null ? "" : r.content), ".") == "@" ? lower(var.root_domain) : "",
     ], r.fqdn)
   ]
 
