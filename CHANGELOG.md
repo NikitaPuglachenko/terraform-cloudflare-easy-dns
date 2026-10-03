@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-10-03
+
+### Changed
+
+- **TTLs below 60 seconds need `minimum_ttl = 30`.** The new `minimum_ttl` input (root module, both wrappers; `60` by default, `30` for Enterprise zones) is the lowest TTL other than `1` (automatic). Cloudflare accepts TTLs below 60 seconds only on Enterprise zones, so on other plans they failed at the API; now the plan fails with what to change. Enterprise zones that use TTLs from 30 to 59 seconds must set `minimum_ttl = 30` when upgrading
+
 ### Fixed
 
 - `ALIASES` under a fully qualified base name (`"app.example.com"`) pointed to `app.example.com.example.com`, and `"cdn.ALIASES"` to `cdn.app.example.com.example.com`; alias targets now use the same fully qualified name as every other check, so a short and a fully qualified base name give the same target. Configurations that used short base names plan no change
@@ -206,7 +212,8 @@ All notable changes to this project are documented in this file. The format is b
 - Inline aliases pointed to a relative name instead of the full hostname
 - Zone apex (`@`) handling for aliases and nested names
 
-[Unreleased]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.7.0...HEAD
+[Unreleased]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.8.0...HEAD
+[2.8.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.4...v2.7.0
 [2.6.4]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.3...v2.6.4
 [2.6.3]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.6.2...v2.6.3

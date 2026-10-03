@@ -118,7 +118,7 @@ A copy in your repository needs neither GitHub nor the Terraform Registry to get
 
 ```sh
 REPO=https://github.com/i386dev/terraform-cloudflare-easy-dns
-VERSION=v2.7.0
+VERSION=v2.8.0
 ARCHIVE="terraform-cloudflare-easy-dns-${VERSION}.tar.gz"
 curl -fsSL -O "${REPO}/releases/download/${VERSION}/${ARCHIVE}"
 curl -fsSL -O "${REPO}/releases/download/${VERSION}/SHA256SUMS"
@@ -151,7 +151,7 @@ What a copy may change without affecting the module:
 To fetch the module on `terraform init` instead, use a Git source with a tag (or the URL of your own mirror):
 
 ```hcl
-source = "git::https://github.com/i386dev/terraform-cloudflare-easy-dns.git?ref=v2.7.0"
+source = "git::https://github.com/i386dev/terraform-cloudflare-easy-dns.git?ref=v2.8.0"
 ```
 
 For provider v4, add `//modules/dns/v4` before `?ref=`.
@@ -339,7 +339,7 @@ The `records` input is validated before any API call:
 - Supported record types: see [Record Types](#record-types), plus `ALIASES` (with an optional prefix, e.g. `"_acme-challenge.TXT"`)
 - Records defined by `content` must have a non-empty `content`
 - Structured records must have `data` with only the fields of their type and all required ones; other records must not set `data`
-- `ttl` and `default_ttl` must be `1` (automatic) or between `30` and `86400`
+- `ttl` and `default_ttl` must be `1` (automatic) or between `minimum_ttl` and `86400`. `minimum_ttl` is `60` by default: Cloudflare accepts TTLs below 60 seconds only on Enterprise zones, where it can be set to `30`. A lower TTL fails at `plan` with what to change; proxied records always get `1`
 - Only `A`, `AAAA`, `CNAME` and `ALIASES` records can be `proxied`
 - `MX` and `URI` records require `priority`
 - `A` records need an IPv4 address and `AAAA` records an IPv6 address; `CNAME`, `MX`, `NS` and `PTR` records need a hostname: labels of letters, digits, `_` and `-` (up to 63 characters) separated by dots, at most 253 characters, an optional trailing dot, and not an IP address (`@` stands for the zone apex, and `.` is a null `MX`, RFC 7505)
@@ -358,7 +358,7 @@ The `records` input is validated before any API call:
 
 ## Inputs
 
-Both wrappers take `zone_id`, `zone_name` (optional, looked up from `zone_id` when omitted), `records`, the [defaults](#defaults-comments-and-tags) and `allowed_cname_conflicts` (see [Validation](#validation)); the v5 wrapper also takes `import_existing`.
+Both wrappers take `zone_id`, `zone_name` (optional, looked up from `zone_id` when omitted), `records`, the [defaults](#defaults-comments-and-tags), `minimum_ttl` and `allowed_cname_conflicts` (see [Validation](#validation)); the v5 wrapper also takes `import_existing`.
 
 The type of `records` is shown as `any`: Terraform silently drops unknown attributes when it converts a value to an object type, so the module accepts the value as is, rejects unknown attributes, and then converts it to the typed structure described in [Record Object Schema](#record-object-schema). The full reference of inputs, outputs, requirements and resources is generated from the code with [terraform-docs](https://terraform-docs.io): [`modules/dns/v4`](https://github.com/i386dev/terraform-cloudflare-easy-dns/tree/main/modules/dns/v4), [`modules/dns/v5`](https://github.com/i386dev/terraform-cloudflare-easy-dns/tree/main/modules/dns/v5).
 
@@ -568,6 +568,12 @@ Version 2 changes the record keys in the state (see [Record Keys](#record-keys))
 
 3. Run `terraform plan`. It should only show records that have moved, with no records to add or destroy.
 4. Run `terraform apply`, then delete `dns_migration.tf`. The next `terraform plan` should show no changes.
+
+### To 2.8: Minimum TTL
+
+> **Enterprise zones with TTLs from 30 to 59 seconds:** set `minimum_ttl = 30` in the module call before upgrading, or the plan fails.
+
+TTLs below 60 seconds (other than `1`, automatic) are rejected at `plan` unless `minimum_ttl = 30`. Cloudflare accepts them only on Enterprise zones, so on other plans such a TTL already failed at the API; now the plan says what to change. The module cannot see the plan of a zone without an extra API call, hence the explicit setting.
 
 ### To 2.7: Names in Lower Case
 
