@@ -37,3 +37,8 @@ output "import_record_ids" {
   description = "Cloudflare record IDs of existing_records matching the configured records, keyed by record key. Records with no or several matches are left out"
   value       = local.import_record_ids
 }
+
+output "import_duplicates" {
+  description = "Cloudflare record IDs of existing_records that match the same configured record, keyed by record key. These records are not imported"
+  value       = local.import_duplicates
+}

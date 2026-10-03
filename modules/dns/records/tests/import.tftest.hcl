@@ -36,6 +36,9 @@ variables {
 run "import_record_ids" {
   command = plan
 
+  # The two "dup" records in the zone also show a warning
+  expect_failures = [check.import_duplicates]
+
   assert {
     condition = output.import_record_ids == {
       "app A 30.40.50.60"                                                    = "id-a"
@@ -47,6 +50,11 @@ run "import_record_ids" {
     }
     error_message = "New records, ambiguous matches and unrelated records must be left out"
   }
+
+  assert {
+    condition     = output.import_duplicates == { "dup A 1.1.1.1" = ["id-dup-1", "id-dup-2"] }
+    error_message = "Records with several matches must be listed with all matching IDs"
+  }
 }
 
 run "no_existing_records" {
@@ -57,7 +65,7 @@ run "no_existing_records" {
   }
 
   assert {
-    condition     = output.import_record_ids == {}
+    condition     = output.import_record_ids == {} && output.import_duplicates == {}
     error_message = "No import IDs without existing records"
   }
 }

@@ -6,6 +6,11 @@ on:
 
 permissions:
   contents: write
+  # Build provenance of the archives: a Sigstore certificate (id-token) and the
+  # attestation stored in the repository
+  id-token: write
+  attestations: write
+  artifact-metadata: write
 
 jobs:
   release:
@@ -40,6 +45,13 @@ jobs:
           tar -czf "dist/${full}" -C dist/module .
           tar -czf "dist/${v5}" -C dist/module-v5 .
           (cd dist && sha256sum "${full}" "${v5}" >SHA256SUMS)
+
+      # Signed SLSA build provenance of the archives, checked with
+      # gh attestation verify <archive> --repo i386dev/terraform-cloudflare-easy-dns
+      - name: Attest build provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: dist/*.tar.gz
 
       - name: Create the release
         env:

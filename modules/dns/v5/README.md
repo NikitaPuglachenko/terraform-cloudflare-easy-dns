@@ -49,6 +49,7 @@ Manages DNS records with `cloudflare_dns_record`. See the [main README](https://
 
 | Name | Description |
 | ---- | ----------- |
+| <a name="output_import_duplicates"></a> [import\_duplicates](#output\_import\_duplicates) | Cloudflare record IDs of existing records that match the same configured record (duplicates in the zone), keyed by record key. Empty unless import\_existing is true; these records are not imported, remove the duplicates from the zone first |
 | <a name="output_import_ids"></a> [import\_ids](#output\_import\_ids) | Import IDs (<zone\_id>/<record\_id>) of records that already exist in the zone, keyed by record key. Empty unless import\_existing is true; records with no or several matches are left out |
 | <a name="output_record_names"></a> [record\_names](#output\_record\_names) | Names of all managed records |
 | <a name="output_records"></a> [records](#output\_records) | Managed records keyed by their stable identifier, with id, name, type and content |

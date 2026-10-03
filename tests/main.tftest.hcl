@@ -26,7 +26,7 @@ run "plan" {
   }
 
   assert {
-    condition     = output.import_ids == {}
+    condition     = output.import_ids == {} && output.import_duplicates == {}
     error_message = "No import lookup unless import_existing is true"
   }
 }
