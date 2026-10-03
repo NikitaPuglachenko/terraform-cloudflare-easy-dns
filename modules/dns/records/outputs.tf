@@ -13,6 +13,16 @@ output "flat_records" {
   }
 
   precondition {
+    condition     = length(local.misplaced_wildcards) == 0
+    error_message = "A wildcard must be the whole leftmost label of a name (\"*\", \"*.app\"); these names put it elsewhere:\n${join("\n", local.misplaced_wildcards)}"
+  }
+
+  precondition {
+    condition     = length(local.self_cnames) == 0
+    error_message = "A CNAME (or alias) cannot point to its own name:\n${join("\n", local.self_cnames)}"
+  }
+
+  precondition {
     condition     = length(local.cname_conflicts) == 0
     error_message = "A CNAME record cannot share its name with other records (except at the zone apex), and a name has at most one CNAME. Names that already have a CNAME next to other records in the zone can be listed in allowed_cname_conflicts:\n${join("\n", local.cname_conflicts)}"
   }

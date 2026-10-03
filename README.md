@@ -13,6 +13,14 @@ The zone is described as one map, grouped by name and then by record type:
 records[<name>][<TYPE>] = [ <record>, ... ]
 ```
 
+| Key | Meaning |
+|:----|:--------|
+| `<name>` | A name within the zone: `app`, `app.example.com`, `@` (apex), `*.app` (wildcard) |
+| `<TYPE>` | A record on `<name>`: `A`, `TXT`, `MX`, ... |
+| `<prefix>.<TYPE>` | A record on `<prefix>.<name>`: `"_acme-challenge.TXT"` |
+| `ALIASES` | CNAMEs named by each `content`, pointing to `<name>` |
+| `<prefix>.ALIASES` | CNAMEs named by each `content`, pointing to `<prefix>.<name>` |
+
 Each record becomes one Cloudflare DNS record, with a stable address in the Terraform state:
 
 ```hcl
@@ -70,7 +78,7 @@ Everything else (all record types, defaults, import of existing records, validat
 - ☁️ **Cloudflare Optimized**: Automatic `TTL = 1` for proxied records.
 - 🛡 **CAA Support**: Proper handling of CAA tags, flags, and values.
 - 📥 **Import of Existing Records**: Adopt records that already exist in the zone with a single `import` block (provider v5).
-- 🧩 **All Record Types**: `SRV`, `URI`, `HTTPS`, `SVCB`, `TLSA`, `SSHFP`, `DS`, `LOC` and other structured records through a single `data` map.
+- 🧩 **Structured Records**: `SRV`, `URI`, `HTTPS`, `SVCB`, `TLSA`, `SSHFP`, `DS`, `LOC` and other structured records through a single `data` map; see [Record Types](#record-types) for the supported list.
 - 🔀 **Provider v4 and v5**: The same input schema for both major versions of the Cloudflare provider.
 - ✅ **Input Validation**: Mistakes in record types, names, IP addresses, TTL, MX or CAA fields fail at `plan`, before reaching the Cloudflare API.
 - 🏷 **Defaults, Comments and Tags**: Set the TTL, proxying, comment and tags once for all records, and override them per record.
@@ -106,6 +114,8 @@ Both wrappers share the same inputs, outputs and record keys, so switching betwe
 
 If `zone_name` is not set, the module looks up the zone by `zone_id`, so the API token needs the `Zone:Read` permission.
 
+> **`zone_name` must be the name of the zone that `zone_id` refers to.** Setting it skips the lookup (no `Zone:Read` needed), and the module cannot check it: a wrong `zone_name` makes alias targets and fully qualified names point into another domain. Leave it unset when the token can read zones.
+
 The v4 wrapper is kept for existing configurations. Provider v4 no longer gets new features, so new configurations should use v5 (the root module), and the v4 wrapper may be removed in a future major version. See [Migrating from v4 to v5](#from-provider-v4-to-v5).
 
 ## Usage
@@ -118,7 +128,7 @@ A copy in your repository needs neither GitHub nor the Terraform Registry to get
 
 ```sh
 REPO=https://github.com/i386dev/terraform-cloudflare-easy-dns
-VERSION=v2.8.1
+VERSION=v2.8.2
 ARCHIVE="terraform-cloudflare-easy-dns-${VERSION}.tar.gz"
 curl -fsSL -O "${REPO}/releases/download/${VERSION}/${ARCHIVE}"
 curl -fsSL -O "${REPO}/releases/download/${VERSION}/SHA256SUMS"
@@ -151,10 +161,10 @@ What a copy may change without affecting the module:
 To fetch the module on `terraform init` instead, use a Git source with a tag (or the URL of your own mirror):
 
 ```hcl
-source = "git::https://github.com/i386dev/terraform-cloudflare-easy-dns.git?ref=v2.8.1"
+source = "git::https://github.com/i386dev/terraform-cloudflare-easy-dns.git?ref=v2.8.2"
 ```
 
-For provider v4, add `//modules/dns/v4` before `?ref=`. In CI, where every run starts from a clean checkout, add `&depth=1` after the tag (`?ref=v2.8.1&depth=1`) to fetch only that commit instead of the whole history.
+For provider v4, add `//modules/dns/v4` before `?ref=`. In CI, where every run starts from a clean checkout, add `&depth=1` after the tag (`?ref=v2.8.2&depth=1`) to fetch only that commit instead of the whole history.
 
 ### HCL or YAML
 
@@ -319,6 +329,18 @@ Since the value is a part of the key, changing it replaces the record. For value
 ]
 ```
 
+#### When to Use `key`
+
+Use a `key` whenever the value of a record is expected to change, or is not known until `apply`:
+
+- DKIM keys and other rotated values
+- ACME challenge tokens and service verification records
+- server IPs that change, e.g. after a migration
+- values from other resources (`content = aws_instance.web.public_ip`)
+- `MX` records that differ only in priority, `CAA` records that differ only in flags
+
+Without a `key`, a changed value is a new record: the old one is deleted and the new one created.
+
 **Values computed by other resources need a `key`.** `for_each` keys must be known at `plan`, so a record whose value comes from another resource (`content = aws_instance.web.public_ip`) fails with "The "for_each" value depends on resource attributes that cannot be determined until apply" unless it has a `key`:
 
 ```hcl
@@ -340,25 +362,27 @@ Names are sent to Cloudflare in lower case, as Cloudflare stores them; the key k
 
 ## Validation
 
-The `records` input is validated before any API call:
+The `records` input is validated before any API call. The module checks the structure and invariants that hold for every zone; protocol-specific values (SRV port ranges, DNSKEY algorithms, LOC coordinates, ...) are left to the Cloudflare API:
 
 - Record attributes must be known: a misspelled attribute such as `proxid = true` fails with `records["app"]["A"][0]: unknown attribute "proxid"` instead of being ignored, and the same for `settings`
 
 - Supported record types: see [Record Types](#record-types), plus `ALIASES` (with an optional prefix, e.g. `"_acme-challenge.TXT"`)
 - Records defined by `content` must have a non-empty `content`
 - Structured records must have `data` with only the fields of their type and all required ones; other records must not set `data`
-- `ttl` and `default_ttl` must be `1` (automatic) or between `minimum_ttl` and `86400`. `minimum_ttl` is `60` by default: Cloudflare accepts TTLs below 60 seconds only on Enterprise zones, where it can be set to `30`. A lower TTL fails at `plan` with what to change; proxied records always get `1`
+- `ttl` and `default_ttl` must be `1` (automatic) or between `minimum_ttl` and `86400`. `minimum_ttl` is `60` by default: Cloudflare accepts TTLs below 60 seconds only on Enterprise zones, where it can be set to `30`. A lower TTL, and a `default_ttl` below `minimum_ttl` even if no record uses it, fail at `plan` with what to change; proxied records always get `1`
 - Only `A`, `AAAA`, `CNAME` and `ALIASES` records can be `proxied`
 - `MX` and `URI` records require `priority`
 - `A` records need an IPv4 address and `AAAA` records an IPv6 address; `CNAME`, `MX`, `NS` and `PTR` records need a hostname: labels of letters, digits, `_` and `-` (up to 63 characters) separated by dots, at most 253 characters, an optional trailing dot, and not an IP address (`@` stands for the zone apex, and `.` is a null `MX`, RFC 7505)
 - `TXT` values are limited to 2048 characters
-- Names, prefixes and `ALIASES` must be valid DNS names: labels of letters, digits, `_` and `-` separated by dots, optionally starting with `*` for wildcards
+- Names, prefixes and `ALIASES` must be valid DNS names: labels of letters, digits, `_` and `-` separated by dots. Internationalized names must be given in Punycode (`xn--mnchen-3ya` for `münchen`), as the Cloudflare API expects them
+- A wildcard `*` must be the whole leftmost label, also in the names a prefix and a base name combine into (`"_acme-challenge.TXT"` under `"*"` would give `_acme-challenge.*`) and in the targets of `<prefix>.ALIASES`
+- A `CNAME` or alias cannot point to its own name (case, a trailing dot, `@` and the short form do not matter)
 - `CAA` records require `tag`: `issue`, `issuewild` or `iodef`
 - `key` must not contain whitespace
 - Record keys must be unique. The error shows where each duplicate is defined, e.g. `"_acme-challenge.app TXT 79bead8e6d65" from records["_acme-challenge.app"]["TXT"][0] and records["app"]["_acme-challenge.TXT"][0]`
 - The same record must not be written twice with different name forms (`www` and `www.example.com`, `@` and the zone name), which would give it two keys; addresses and hostnames (`A`, `AAAA`, `MX`, `NS`, `PTR`) are compared case-insensitively and without a trailing dot
 - A `CNAME` (including `ALIASES`) cannot share its name with other records, except at the zone apex (`@` or the zone name) where Cloudflare uses CNAME flattening, and a name has at most one `CNAME`, also with different `key`s. Names are compared fully qualified, so `www` and `www.example.com` are the same name
-- Existing zones may have names where a `CNAME` shares its name with other records, which Cloudflare accepts for records that are not proxied. Such names can be listed in `allowed_cname_conflicts` (compared fully qualified and case-insensitively), so the zone can be adopted without changing live DNS first. Only the listed names are exempt: a conflict on any other name still fails, a second `CNAME` on a listed name still fails, and a listed name that has no conflict anymore shows a warning so the list can shrink:
+- **Migration escape hatch for legacy zones:** existing zones may have names where a `CNAME` shares its name with other records, which Cloudflare accepts for records that are not proxied. Such names can be listed in `allowed_cname_conflicts` (compared fully qualified and case-insensitively), so the zone can be adopted without changing live DNS first. Only the listed names are exempt: a conflict on any other name still fails, a second `CNAME` on a listed name still fails, and a listed name that has no conflict anymore shows a warning so the list can shrink:
 
   ```hcl
   allowed_cname_conflicts = ["community", "*.legacy"]
@@ -366,7 +390,7 @@ The `records` input is validated before any API call:
 
 ## Inputs
 
-Both wrappers take `zone_id`, `zone_name` (optional, looked up from `zone_id` when omitted), `records`, the [defaults](#defaults-comments-and-tags), `minimum_ttl` and `allowed_cname_conflicts` (see [Validation](#validation)); the v5 wrapper also takes `import_existing`.
+Both wrappers take `zone_id`, `zone_name` (optional, looked up from `zone_id` when omitted; when set, it must be the name of that zone, see [Requirements](#requirements)), `records`, the [defaults](#defaults-comments-and-tags), `minimum_ttl` and `allowed_cname_conflicts` (see [Validation](#validation)); the v5 wrapper also takes `import_existing`.
 
 The type of `records` is shown as `any`: Terraform silently drops unknown attributes when it converts a value to an object type, so the module accepts the value as is, rejects unknown attributes, and then converts it to the typed structure described in [Record Object Schema](#record-object-schema). The full reference of inputs, outputs, requirements and resources is generated from the code with [terraform-docs](https://terraform-docs.io): [`modules/dns/v4`](https://github.com/i386dev/terraform-cloudflare-easy-dns/tree/main/modules/dns/v4), [`modules/dns/v5`](https://github.com/i386dev/terraform-cloudflare-easy-dns/tree/main/modules/dns/v5).
 
@@ -544,6 +568,10 @@ A service advertised with SRV:
 ## Importing Existing Records
 
 When the zone already has records, the first `apply` would fail with "record already exists" for each of them. With provider v5 (the root module or the `v5` submodule), the module can find the existing records and adopt them into the state instead. It works the same with records in HCL or in YAML; see [`examples/import`](https://github.com/i386dev/terraform-cloudflare-easy-dns/tree/main/examples/import).
+
+> **`import_existing` does not import anything by itself.** It only finds the IDs of existing records and exposes them in `import_ids`; the `import` block in step 2 does the import. It is not a reconciliation either: records of the zone that are not in `records` are left alone.
+
+Each lookup reads up to 10,000 records of one type; in a zone with more records of a configured type, the rest are not found and would be created again.
 
 1. Set `import_existing = true`. The module then reads the records of the zone (the API token needs the `DNS Read` permission) and matches them to the configured records by name, type and value. The records are read with one request per record type of the configuration, which avoids a provider crash on zones with CAA records ([cloudflare/terraform-provider-cloudflare#7004](https://github.com/cloudflare/terraform-provider-cloudflare/issues/7004)).
 2. Add an `import` block next to the module call:
