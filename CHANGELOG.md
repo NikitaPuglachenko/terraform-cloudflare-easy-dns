@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.9.0] - 2026-10-03
+
 ### Added
 
 - `import_duplicates` output (root module, v5 wrapper): records that match several existing records in the zone when `import_existing` is set, keyed by record key, with the Cloudflare IDs of the matches. These records are not imported, and `plan` shows a warning listing them
@@ -244,7 +246,8 @@ All notable changes to this project are documented in this file. The format is b
 - Inline aliases pointed to a relative name instead of the full hostname
 - Zone apex (`@`) handling for aliases and nested names
 
-[Unreleased]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.8.2...HEAD
+[Unreleased]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.9.0...HEAD
+[2.9.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.8.2...v2.9.0
 [2.8.2]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.8.1...v2.8.2
 [2.8.1]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.8.0...v2.8.1
 [2.8.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.7.0...v2.8.0
