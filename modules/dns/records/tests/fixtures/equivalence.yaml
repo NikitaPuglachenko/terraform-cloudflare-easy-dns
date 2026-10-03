@@ -1,0 +1,28 @@
+# The records of run "hcl_equals_yaml" in tests/identity.tftest.hcl, written as in YAML files
+records:
+  "@":
+    TXT:
+      - content: 'v=spf1 "a" -all'
+      - { content: "off", key: flag }
+    CAA:
+      - { content: letsencrypt.org, tag: issue }
+      - { content: "mailto:security@example.com", tag: iodef, flags: 128 }
+    MX:
+      - { content: mail.example.com., priority: 10 }
+  app:
+    A:
+      - { content: 192.0.2.10, ttl: 300, proxied: false }
+    _acme-challenge.TXT:
+      - content: "yes"
+    ALIASES:
+      - { content: www, proxied: true }
+  _sip._tcp:
+    SRV:
+      - data: { priority: 10, weight: 5, port: 5060, target: sip.example.com }
+  office:
+    LOC:
+      - key: hq
+        data: { lat_degrees: 59, lat_minutes: 26, lat_seconds: 14, lat_direction: N, long_degrees: 24, long_minutes: 44, long_seconds: 43, long_direction: E }
+  sip:
+    NAPTR:
+      - data: { order: 100, preference: 10, flags: S, service: SIP+D2U, regex: "", replacement: _sip._udp.example.com. }

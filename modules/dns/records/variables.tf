@@ -87,223 +87,450 @@ variable "records" {
     )
   )
 
+  # Every validation lists the records that fail it as records["<name>"]["<type>"][<index>].
+  # Validations cannot use locals on Terraform 1.8, so the record type is bound with
+  # `for kind in [...]`, and the list of failures is written twice: in the condition and in
+  # the error message
   validation {
-    condition = alltrue(flatten([
-      for base_name, type_map in var.records : [
-        for raw_key, recs in type_map : contains(
-          [
-            "A", "AAAA", "CNAME", "MX", "NS", "PTR", "TXT", "OPENPGPKEY", "CAA", "ALIASES",
-            "CERT", "DNSKEY", "DS", "HTTPS", "LOC", "NAPTR", "SMIMEA", "SRV", "SSHFP", "SVCB", "TLSA", "URI",
-          ],
-          element(split(".", raw_key), length(split(".", raw_key)) - 1)
-        )
-      ]
-    ]))
-    error_message = "Unsupported record type. Supported: A, AAAA, CNAME, MX, NS, PTR, TXT, OPENPGPKEY, CAA, ALIASES, CERT, DNSKEY, DS, HTTPS, LOC, NAPTR, SMIMEA, SRV, SSHFP, SVCB, TLSA and URI (optionally with a prefix, e.g. \"_acme-challenge.TXT\")."
-  }
-
-  validation {
-    condition = alltrue(flatten([
+    condition = length(flatten([
       for base_name, type_map in var.records : [
         for raw_key, recs in type_map : [
-          for rec in recs : rec.content != null && rec.content != ""
-        ] if !contains(["CERT", "DNSKEY", "DS", "HTTPS", "LOC", "NAPTR", "SMIMEA", "SRV", "SSHFP", "SVCB", "TLSA", "URI"], element(split(".", raw_key), length(split(".", raw_key)) - 1))
-      ]
-    ]))
-    error_message = "Every record except SRV, URI, HTTPS, SVCB, TLSA, SMIMEA, SSHFP, DS, DNSKEY, CERT, NAPTR and LOC must have a non-empty content."
-  }
-
-  validation {
-    condition = alltrue(flatten([
-      for base_name, type_map in var.records : [
-        for raw_key, recs in type_map : [
-          for rec in recs : (
-            contains(["CERT", "DNSKEY", "DS", "HTTPS", "LOC", "NAPTR", "SMIMEA", "SRV", "SSHFP", "SVCB", "TLSA", "URI"], element(split(".", raw_key), length(split(".", raw_key)) - 1))
-            ? rec.data != null && length(coalesce(rec.data, {})) > 0
-            : rec.data == null
+          for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : "records[\"${base_name}\"][\"${raw_key}\"]"
+          if !contains(
+            ["A", "AAAA", "CNAME", "MX", "NS", "PTR", "TXT", "OPENPGPKEY", "CAA", "ALIASES", "CERT", "DNSKEY", "DS", "HTTPS", "LOC", "NAPTR", "SMIMEA", "SRV", "SSHFP", "SVCB", "TLSA", "URI"],
+            kind
           )
         ]
       ]
-    ]))
-    error_message = "SRV, URI, HTTPS, SVCB, TLSA, SMIMEA, SSHFP, DS, DNSKEY, CERT, NAPTR and LOC records require data; other record types must not set it."
-  }
-
-  validation {
-    condition = alltrue(flatten([
+    ])) == 0
+    error_message = "Unsupported record type. Supported: A, AAAA, CNAME, MX, NS, PTR, TXT, OPENPGPKEY, CAA, ALIASES, CERT, DNSKEY, DS, HTTPS, LOC, NAPTR, SMIMEA, SRV, SSHFP, SVCB, TLSA and URI (optionally with a prefix, e.g. \"_acme-challenge.TXT\"):\n${join("\n", flatten([
       for base_name, type_map in var.records : [
         for raw_key, recs in type_map : [
-          for rec in recs : (
-            length(setsubtract(keys(coalesce(rec.data, {})), lookup({
-              SRV    = ["priority", "weight", "port", "target"]
-              URI    = ["weight", "target"]
-              HTTPS  = ["priority", "target", "value"]
-              SVCB   = ["priority", "target", "value"]
-              TLSA   = ["usage", "selector", "matching_type", "certificate"]
-              SMIMEA = ["usage", "selector", "matching_type", "certificate"]
-              SSHFP  = ["algorithm", "type", "fingerprint"]
-              DS     = ["key_tag", "algorithm", "digest_type", "digest"]
-              DNSKEY = ["flags", "protocol", "algorithm", "public_key"]
-              CERT   = ["type", "key_tag", "algorithm", "certificate"]
-              NAPTR  = ["order", "preference", "flags", "service", "regex", "replacement"]
-              LOC = [
-                "lat_degrees", "lat_minutes", "lat_seconds", "lat_direction",
-                "long_degrees", "long_minutes", "long_seconds", "long_direction",
-                "altitude", "size", "precision_horz", "precision_vert",
-              ]
-            }, element(split(".", raw_key), length(split(".", raw_key)) - 1), []))) == 0
-            && length(setsubtract(lookup({
-              SRV    = ["priority", "weight", "port", "target"]
-              URI    = ["weight", "target"]
-              HTTPS  = ["priority", "target"]
-              SVCB   = ["priority", "target"]
-              TLSA   = ["usage", "selector", "matching_type", "certificate"]
-              SMIMEA = ["usage", "selector", "matching_type", "certificate"]
-              SSHFP  = ["algorithm", "type", "fingerprint"]
-              DS     = ["key_tag", "algorithm", "digest_type", "digest"]
-              DNSKEY = ["flags", "protocol", "algorithm", "public_key"]
-              CERT   = ["type", "key_tag", "algorithm", "certificate"]
-              NAPTR  = ["order", "preference", "replacement"]
-              LOC = [
-                "lat_degrees", "lat_minutes", "lat_seconds", "lat_direction",
-                "long_degrees", "long_minutes", "long_seconds", "long_direction",
-              ]
-            }, element(split(".", raw_key), length(split(".", raw_key)) - 1), []), keys(coalesce(rec.data, {})))) == 0
-          )
-        ] if contains(["CERT", "DNSKEY", "DS", "HTTPS", "LOC", "NAPTR", "SMIMEA", "SRV", "SSHFP", "SVCB", "TLSA", "URI"], element(split(".", raw_key), length(split(".", raw_key)) - 1))
-      ]
-    ]))
-    error_message = "Record data has unknown or missing fields. See \"Record Types\" in the README for the fields of each type."
-  }
-
-  validation {
-    condition = alltrue(flatten([
-      for base_name, type_map in var.records : [
-        for raw_key, recs in type_map : [
-          for rec in recs : rec.ttl == null || rec.ttl == 1 || (coalesce(rec.ttl, 1) >= 30 && coalesce(rec.ttl, 1) <= 86400)
-        ]
-      ]
-    ]))
-    error_message = "TTL must be 1 (automatic) or between 30 and 86400 seconds."
-  }
-
-  validation {
-    condition = alltrue(flatten([
-      for base_name, type_map in var.records : [
-        for raw_key, recs in type_map : [
-          for rec in recs : !coalesce(rec.proxied, false) || contains(
-            ["A", "AAAA", "CNAME", "ALIASES"],
-            element(split(".", raw_key), length(split(".", raw_key)) - 1)
+          for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : "records[\"${base_name}\"][\"${raw_key}\"]"
+          if !contains(
+            ["A", "AAAA", "CNAME", "MX", "NS", "PTR", "TXT", "OPENPGPKEY", "CAA", "ALIASES", "CERT", "DNSKEY", "DS", "HTTPS", "LOC", "NAPTR", "SMIMEA", "SRV", "SSHFP", "SVCB", "TLSA", "URI"],
+            kind
           )
         ]
       ]
-    ]))
-    error_message = "Only A, AAAA, CNAME and ALIASES records can be proxied."
+    ]))}"
   }
 
   validation {
-    condition = alltrue(flatten([
+    condition = length(flatten([
       for base_name, type_map in var.records : [
         for raw_key, recs in type_map : [
-          for rec in recs : rec.priority != null
-        ] if contains(["MX", "URI"], element(split(".", raw_key), length(split(".", raw_key)) - 1))
-      ]
-    ]))
-    error_message = "MX and URI records require a priority."
-  }
-
-  validation {
-    condition = alltrue(flatten([
-      for base_name, type_map in var.records : [
-        for raw_key, recs in type_map : [
-          for rec in recs : contains(["issue", "issuewild", "iodef"], coalesce(rec.tag, "none"))
-        ] if element(split(".", raw_key), length(split(".", raw_key)) - 1) == "CAA"
-      ]
-    ]))
-    error_message = "CAA records require a tag: issue, issuewild or iodef."
-  }
-
-  validation {
-    condition = alltrue(flatten([
-      for base_name, type_map in var.records : [
-        for raw_key, recs in type_map : [
-          for rec in recs : rec.key == null || can(regex("^\\S+$", rec.key))
+          for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : [
+            for idx, rec in recs : "records[\"${base_name}\"][\"${raw_key}\"][${idx}]"
+            if rec.content == null || rec.content == ""
+          ] if !contains(["CERT", "DNSKEY", "DS", "HTTPS", "LOC", "NAPTR", "SMIMEA", "SRV", "SSHFP", "SVCB", "TLSA", "URI"], kind)
         ]
       ]
-    ]))
-    error_message = "Record key must be a non-empty string without whitespace."
+    ])) == 0
+    error_message = "Every record except SRV, URI, HTTPS, SVCB, TLSA, SMIMEA, SSHFP, DS, DNSKEY, CERT, NAPTR and LOC must have a non-empty content:\n${join("\n", flatten([
+      for base_name, type_map in var.records : [
+        for raw_key, recs in type_map : [
+          for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : [
+            for idx, rec in recs : "records[\"${base_name}\"][\"${raw_key}\"][${idx}]"
+            if rec.content == null || rec.content == ""
+          ] if !contains(["CERT", "DNSKEY", "DS", "HTTPS", "LOC", "NAPTR", "SMIMEA", "SRV", "SSHFP", "SVCB", "TLSA", "URI"], kind)
+        ]
+      ]
+    ]))}"
   }
 
   validation {
-    condition = alltrue(flatten([
-      for base_name, type_map in var.records : concat(
-        [base_name == "@" || can(regex("^(\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*$", base_name))],
+    condition = length(flatten([
+      for base_name, type_map in var.records : [
+        for raw_key, recs in type_map : [
+          for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : [
+            for idx, rec in recs : "records[\"${base_name}\"][\"${raw_key}\"][${idx}]"
+            if contains(["CERT", "DNSKEY", "DS", "HTTPS", "LOC", "NAPTR", "SMIMEA", "SRV", "SSHFP", "SVCB", "TLSA", "URI"], kind) ? rec.data == null || length(coalesce(rec.data, {})) == 0 : rec.data != null
+          ]
+        ]
+      ]
+    ])) == 0
+    error_message = "SRV, URI, HTTPS, SVCB, TLSA, SMIMEA, SSHFP, DS, DNSKEY, CERT, NAPTR and LOC records require data; other record types must not set it:\n${join("\n", flatten([
+      for base_name, type_map in var.records : [
+        for raw_key, recs in type_map : [
+          for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : [
+            for idx, rec in recs : "records[\"${base_name}\"][\"${raw_key}\"][${idx}]"
+            if contains(["CERT", "DNSKEY", "DS", "HTTPS", "LOC", "NAPTR", "SMIMEA", "SRV", "SSHFP", "SVCB", "TLSA", "URI"], kind) ? rec.data == null || length(coalesce(rec.data, {})) == 0 : rec.data != null
+          ]
+        ]
+      ]
+    ]))}"
+  }
+
+  validation {
+    condition = length(flatten([
+      for base_name, type_map in var.records : [
+        for raw_key, recs in type_map : [
+          for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : [
+            for idx, rec in recs : concat(
+              [for field in setsubtract(keys(coalesce(rec.data, {})), lookup({
+                SRV    = ["priority", "weight", "port", "target"]
+                URI    = ["weight", "target"]
+                HTTPS  = ["priority", "target", "value"]
+                SVCB   = ["priority", "target", "value"]
+                TLSA   = ["usage", "selector", "matching_type", "certificate"]
+                SMIMEA = ["usage", "selector", "matching_type", "certificate"]
+                SSHFP  = ["algorithm", "type", "fingerprint"]
+                DS     = ["key_tag", "algorithm", "digest_type", "digest"]
+                DNSKEY = ["flags", "protocol", "algorithm", "public_key"]
+                CERT   = ["type", "key_tag", "algorithm", "certificate"]
+                NAPTR  = ["order", "preference", "flags", "service", "regex", "replacement"]
+                LOC = [
+                  "lat_degrees", "lat_minutes", "lat_seconds", "lat_direction",
+                  "long_degrees", "long_minutes", "long_seconds", "long_direction",
+                  "altitude", "size", "precision_horz", "precision_vert",
+                ]
+              }, kind, [])) : "records[\"${base_name}\"][\"${raw_key}\"][${idx}].data: unknown field \"${field}\""],
+              [for field in setsubtract(lookup({
+                SRV    = ["priority", "weight", "port", "target"]
+                URI    = ["weight", "target"]
+                HTTPS  = ["priority", "target"]
+                SVCB   = ["priority", "target"]
+                TLSA   = ["usage", "selector", "matching_type", "certificate"]
+                SMIMEA = ["usage", "selector", "matching_type", "certificate"]
+                SSHFP  = ["algorithm", "type", "fingerprint"]
+                DS     = ["key_tag", "algorithm", "digest_type", "digest"]
+                DNSKEY = ["flags", "protocol", "algorithm", "public_key"]
+                CERT   = ["type", "key_tag", "algorithm", "certificate"]
+                NAPTR  = ["order", "preference", "replacement"]
+                LOC = [
+                  "lat_degrees", "lat_minutes", "lat_seconds", "lat_direction",
+                  "long_degrees", "long_minutes", "long_seconds", "long_direction",
+                ]
+              }, kind, []), keys(coalesce(rec.data, {}))) : "records[\"${base_name}\"][\"${raw_key}\"][${idx}].data: missing field \"${field}\""],
+            )
+          ] if contains(["CERT", "DNSKEY", "DS", "HTTPS", "LOC", "NAPTR", "SMIMEA", "SRV", "SSHFP", "SVCB", "TLSA", "URI"], kind)
+        ]
+      ]
+    ])) == 0
+    error_message = "Record data has unknown or missing fields. See \"Record Types\" in the README for the fields of each type:\n${join("\n", flatten([
+      for base_name, type_map in var.records : [
+        for raw_key, recs in type_map : [
+          for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : [
+            for idx, rec in recs : concat(
+              [for field in setsubtract(keys(coalesce(rec.data, {})), lookup({
+                SRV    = ["priority", "weight", "port", "target"]
+                URI    = ["weight", "target"]
+                HTTPS  = ["priority", "target", "value"]
+                SVCB   = ["priority", "target", "value"]
+                TLSA   = ["usage", "selector", "matching_type", "certificate"]
+                SMIMEA = ["usage", "selector", "matching_type", "certificate"]
+                SSHFP  = ["algorithm", "type", "fingerprint"]
+                DS     = ["key_tag", "algorithm", "digest_type", "digest"]
+                DNSKEY = ["flags", "protocol", "algorithm", "public_key"]
+                CERT   = ["type", "key_tag", "algorithm", "certificate"]
+                NAPTR  = ["order", "preference", "flags", "service", "regex", "replacement"]
+                LOC = [
+                  "lat_degrees", "lat_minutes", "lat_seconds", "lat_direction",
+                  "long_degrees", "long_minutes", "long_seconds", "long_direction",
+                  "altitude", "size", "precision_horz", "precision_vert",
+                ]
+              }, kind, [])) : "records[\"${base_name}\"][\"${raw_key}\"][${idx}].data: unknown field \"${field}\""],
+              [for field in setsubtract(lookup({
+                SRV    = ["priority", "weight", "port", "target"]
+                URI    = ["weight", "target"]
+                HTTPS  = ["priority", "target"]
+                SVCB   = ["priority", "target"]
+                TLSA   = ["usage", "selector", "matching_type", "certificate"]
+                SMIMEA = ["usage", "selector", "matching_type", "certificate"]
+                SSHFP  = ["algorithm", "type", "fingerprint"]
+                DS     = ["key_tag", "algorithm", "digest_type", "digest"]
+                DNSKEY = ["flags", "protocol", "algorithm", "public_key"]
+                CERT   = ["type", "key_tag", "algorithm", "certificate"]
+                NAPTR  = ["order", "preference", "replacement"]
+                LOC = [
+                  "lat_degrees", "lat_minutes", "lat_seconds", "lat_direction",
+                  "long_degrees", "long_minutes", "long_seconds", "long_direction",
+                ]
+              }, kind, []), keys(coalesce(rec.data, {}))) : "records[\"${base_name}\"][\"${raw_key}\"][${idx}].data: missing field \"${field}\""],
+            )
+          ] if contains(["CERT", "DNSKEY", "DS", "HTTPS", "LOC", "NAPTR", "SMIMEA", "SRV", "SSHFP", "SVCB", "TLSA", "URI"], kind)
+        ]
+      ]
+    ]))}"
+  }
+
+  validation {
+    condition = length(flatten([
+      for base_name, type_map in var.records : [
+        for raw_key, recs in type_map : [
+          for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : [
+            for idx, rec in recs : "records[\"${base_name}\"][\"${raw_key}\"][${idx}]: ttl ${rec.ttl}"
+            if !(rec.ttl == null || rec.ttl == 1 || (coalesce(rec.ttl, 1) >= 30 && coalesce(rec.ttl, 1) <= 86400))
+          ]
+        ]
+      ]
+    ])) == 0
+    error_message = "TTL must be 1 (automatic) or between 30 and 86400 seconds:\n${join("\n", flatten([
+      for base_name, type_map in var.records : [
+        for raw_key, recs in type_map : [
+          for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : [
+            for idx, rec in recs : "records[\"${base_name}\"][\"${raw_key}\"][${idx}]: ttl ${rec.ttl}"
+            if !(rec.ttl == null || rec.ttl == 1 || (coalesce(rec.ttl, 1) >= 30 && coalesce(rec.ttl, 1) <= 86400))
+          ]
+        ]
+      ]
+    ]))}"
+  }
+
+  validation {
+    condition = length(flatten([
+      for base_name, type_map in var.records : [
+        for raw_key, recs in type_map : [
+          for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : [
+            for idx, rec in recs : "records[\"${base_name}\"][\"${raw_key}\"][${idx}]"
+            if coalesce(rec.proxied, false) && !contains(["A", "AAAA", "CNAME", "ALIASES"], kind)
+          ]
+        ]
+      ]
+    ])) == 0
+    error_message = "Only A, AAAA, CNAME and ALIASES records can be proxied:\n${join("\n", flatten([
+      for base_name, type_map in var.records : [
+        for raw_key, recs in type_map : [
+          for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : [
+            for idx, rec in recs : "records[\"${base_name}\"][\"${raw_key}\"][${idx}]"
+            if coalesce(rec.proxied, false) && !contains(["A", "AAAA", "CNAME", "ALIASES"], kind)
+          ]
+        ]
+      ]
+    ]))}"
+  }
+
+  validation {
+    condition = length(flatten([
+      for base_name, type_map in var.records : [
+        for raw_key, recs in type_map : [
+          for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : [
+            for idx, rec in recs : "records[\"${base_name}\"][\"${raw_key}\"][${idx}]"
+            if rec.priority == null
+          ] if contains(["MX", "URI"], kind)
+        ]
+      ]
+    ])) == 0
+    error_message = "MX and URI records require a priority:\n${join("\n", flatten([
+      for base_name, type_map in var.records : [
+        for raw_key, recs in type_map : [
+          for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : [
+            for idx, rec in recs : "records[\"${base_name}\"][\"${raw_key}\"][${idx}]"
+            if rec.priority == null
+          ] if contains(["MX", "URI"], kind)
+        ]
+      ]
+    ]))}"
+  }
+
+  validation {
+    condition = length(flatten([
+      for base_name, type_map in var.records : [
+        for raw_key, recs in type_map : [
+          for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : [
+            for idx, rec in recs : "records[\"${base_name}\"][\"${raw_key}\"][${idx}]: tag ${jsonencode(rec.tag)}"
+            if !contains(["issue", "issuewild", "iodef"], coalesce(rec.tag, "none"))
+          ] if kind == "CAA"
+        ]
+      ]
+    ])) == 0
+    error_message = "CAA records require a tag: issue, issuewild or iodef:\n${join("\n", flatten([
+      for base_name, type_map in var.records : [
+        for raw_key, recs in type_map : [
+          for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : [
+            for idx, rec in recs : "records[\"${base_name}\"][\"${raw_key}\"][${idx}]: tag ${jsonencode(rec.tag)}"
+            if !contains(["issue", "issuewild", "iodef"], coalesce(rec.tag, "none"))
+          ] if kind == "CAA"
+        ]
+      ]
+    ]))}"
+  }
+
+  validation {
+    condition = length(flatten([
+      for base_name, type_map in var.records : [
+        for raw_key, recs in type_map : [
+          for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : [
+            for idx, rec in recs : "records[\"${base_name}\"][\"${raw_key}\"][${idx}]: key ${jsonencode(rec.key)}"
+            if !(rec.key == null || can(regex("^\\S+$", rec.key)))
+          ]
+        ]
+      ]
+    ])) == 0
+    error_message = "Record key must be a non-empty string without whitespace:\n${join("\n", flatten([
+      for base_name, type_map in var.records : [
+        for raw_key, recs in type_map : [
+          for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : [
+            for idx, rec in recs : "records[\"${base_name}\"][\"${raw_key}\"][${idx}]: key ${jsonencode(rec.key)}"
+            if !(rec.key == null || can(regex("^\\S+$", rec.key)))
+          ]
+        ]
+      ]
+    ]))}"
+  }
+
+  validation {
+    condition = length(flatten([
+      concat(
         [
-          for raw_key, recs in type_map :
-          length(split(".", raw_key)) == 1 || can(regex("^(\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*$", join(".", slice(split(".", raw_key), 0, length(split(".", raw_key)) - 1))))
+          for base_name, type_map in var.records : "records[\"${base_name}\"]"
+          if !(base_name == "@" || can(regex("^(\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*$", base_name)))
         ],
         [
-          for raw_key, recs in type_map : [
-            for rec in recs : rec.content == null || can(regex("^(\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*$", coalesce(rec.content, "x")))
-          ] if element(split(".", raw_key), length(split(".", raw_key)) - 1) == "ALIASES"
-        ]
+          for base_name, type_map in var.records : [
+            for raw_key, recs in type_map : "records[\"${base_name}\"][\"${raw_key}\"]: prefix \"${join(".", slice(split(".", raw_key), 0, length(split(".", raw_key)) - 1))}\""
+            if length(split(".", raw_key)) > 1 && !can(regex("^(\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*$", join(".", slice(split(".", raw_key), 0, length(split(".", raw_key)) - 1))))
+          ]
+        ],
+        [
+          for base_name, type_map in var.records : [
+            for raw_key, recs in type_map : [
+              for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : [
+                for idx, rec in recs : "records[\"${base_name}\"][\"${raw_key}\"][${idx}]: ${jsonencode(rec.content)}"
+                if rec.content != null && !can(regex("^(\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*$", coalesce(rec.content, "x")))
+              ] if kind == "ALIASES"
+            ]
+          ]
+        ],
       )
-    ]))
-    error_message = "Names, prefixes and ALIASES must be valid DNS names: labels of letters, digits, '_' and '-' (up to 63 characters) separated by dots, optionally starting with '*'."
+    ])) == 0
+    error_message = "Names, prefixes and ALIASES must be valid DNS names: labels of letters, digits, '_' and '-' (up to 63 characters) separated by dots, optionally starting with '*':\n${join("\n", flatten([
+      concat(
+        [
+          for base_name, type_map in var.records : "records[\"${base_name}\"]"
+          if !(base_name == "@" || can(regex("^(\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*$", base_name)))
+        ],
+        [
+          for base_name, type_map in var.records : [
+            for raw_key, recs in type_map : "records[\"${base_name}\"][\"${raw_key}\"]: prefix \"${join(".", slice(split(".", raw_key), 0, length(split(".", raw_key)) - 1))}\""
+            if length(split(".", raw_key)) > 1 && !can(regex("^(\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*$", join(".", slice(split(".", raw_key), 0, length(split(".", raw_key)) - 1))))
+          ]
+        ],
+        [
+          for base_name, type_map in var.records : [
+            for raw_key, recs in type_map : [
+              for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : [
+                for idx, rec in recs : "records[\"${base_name}\"][\"${raw_key}\"][${idx}]: ${jsonencode(rec.content)}"
+                if rec.content != null && !can(regex("^(\\*|[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*$", coalesce(rec.content, "x")))
+              ] if kind == "ALIASES"
+            ]
+          ]
+        ],
+      )
+    ]))}"
   }
 
+  # DNS names in CNAME, MX, NS and PTR values: labels of letters, digits, '_' and '-' (up to
+  # 63 characters) separated by dots, at most 253 characters, an optional trailing dot; not
+  # an IP address. "@" is the zone apex, and "." is a null MX (RFC 7505)
   validation {
-    condition = alltrue(flatten([
+    condition = length(flatten([
       for base_name, type_map in var.records : [
         for raw_key, recs in type_map : [
-          for rec in recs : (
-            element(split(".", raw_key), length(split(".", raw_key)) - 1) == "A" ? can(cidrhost("${coalesce(rec.content, "x")}/32", 0)) && !strcontains(coalesce(rec.content, "x"), ":") :
-            element(split(".", raw_key), length(split(".", raw_key)) - 1) == "AAAA" ? can(cidrhost("${coalesce(rec.content, "x")}/128", 0)) && strcontains(coalesce(rec.content, "x"), ":") :
-            # DNS names: labels of letters, digits, '_' and '-' (up to 63 characters)
-            # separated by dots, at most 253 characters, an optional trailing dot; not an
-            # IP address. "@" is the zone apex, and "." is a null MX (RFC 7505).
-            contains(["CNAME", "MX", "NS", "PTR"], element(split(".", raw_key), length(split(".", raw_key)) - 1)) ? (
-              coalesce(rec.content, "x") == "@"
-              || (element(split(".", raw_key), length(split(".", raw_key)) - 1) == "MX" && coalesce(rec.content, "x") == ".")
-              || (
-                length(trimsuffix(coalesce(rec.content, "x"), ".")) <= 253
-                && can(regex("^[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.?$", coalesce(rec.content, "x")))
-                && !can(cidrhost("${trimsuffix(coalesce(rec.content, "x"), ".")}/32", 0))
+          for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : [
+            for idx, rec in recs : [
+              for value in [coalesce(rec.content, "x")] : "records[\"${base_name}\"][\"${raw_key}\"][${idx}]: ${kind == "TXT" ? "${length(value)} characters" : jsonencode(rec.content)}"
+              if !(
+                kind == "A" ? can(cidrhost("${value}/32", 0)) && !strcontains(value, ":") :
+                kind == "AAAA" ? can(cidrhost("${value}/128", 0)) && strcontains(value, ":") :
+                contains(["CNAME", "MX", "NS", "PTR"], kind) ? (
+                  value == "@"
+                  || (kind == "MX" && value == ".")
+                  || (
+                    length(trimsuffix(value, ".")) <= 253
+                    && can(regex("^[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.?$", value))
+                    && !can(cidrhost("${trimsuffix(value, ".")}/32", 0))
+                  )
+                ) :
+                kind == "TXT" ? length(value) <= 2048 :
+                true
               )
-            ) :
-            element(split(".", raw_key), length(split(".", raw_key)) - 1) == "TXT" ? length(coalesce(rec.content, "")) <= 2048 :
-            true
-          )
+            ]
+          ]
         ]
       ]
-    ]))
-    error_message = "A records need an IPv4 address and AAAA records an IPv6 address; CNAME, MX, NS and PTR records need a DNS name (labels of letters, digits, '_' and '-' up to 63 characters, at most 253 in total, not an IP address; \"@\" for the zone apex, \".\" for a null MX); TXT values are limited to 2048 characters."
+    ])) == 0
+    error_message = "A records need an IPv4 address and AAAA records an IPv6 address; CNAME, MX, NS and PTR records need a DNS name (labels of letters, digits, '_' and '-' up to 63 characters, at most 253 in total, not an IP address; \"@\" for the zone apex, \".\" for a null MX); TXT values are limited to 2048 characters:\n${join("\n", flatten([
+      for base_name, type_map in var.records : [
+        for raw_key, recs in type_map : [
+          for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : [
+            for idx, rec in recs : [
+              for value in [coalesce(rec.content, "x")] : "records[\"${base_name}\"][\"${raw_key}\"][${idx}]: ${kind == "TXT" ? "${length(value)} characters" : jsonencode(rec.content)}"
+              if !(
+                kind == "A" ? can(cidrhost("${value}/32", 0)) && !strcontains(value, ":") :
+                kind == "AAAA" ? can(cidrhost("${value}/128", 0)) && strcontains(value, ":") :
+                contains(["CNAME", "MX", "NS", "PTR"], kind) ? (
+                  value == "@"
+                  || (kind == "MX" && value == ".")
+                  || (
+                    length(trimsuffix(value, ".")) <= 253
+                    && can(regex("^[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.?$", value))
+                    && !can(cidrhost("${trimsuffix(value, ".")}/32", 0))
+                  )
+                ) :
+                kind == "TXT" ? length(value) <= 2048 :
+                true
+              )
+            ]
+          ]
+        ]
+      ]
+    ]))}"
   }
 
   # Hostnames in data, with the same rule as CNAME, MX, NS and PTR values. "." is the
   # root: no service for SRV (RFC 2782), the owner name for HTTPS and SVCB (RFC 9460),
   # no replacement for NAPTR (RFC 3403). data is passed to Cloudflare as written, so "@"
-  # is not accepted here
+  # is not accepted here. A null value becomes "" (invalid): Terraform 1.8 evaluates
+  # both sides of ||
   validation {
-    condition = alltrue(flatten([
+    condition = length(flatten([
       for base_name, type_map in var.records : [
         for raw_key, recs in type_map : [
-          # A null value becomes "" (invalid): Terraform 1.8 evaluates both sides of ||
-          for rec in recs : [
-            for raw in [lookup(coalesce(rec.data, {}), element(split(".", raw_key), length(split(".", raw_key)) - 1) == "NAPTR" ? "replacement" : "target", ".")] : [
-              for value in [raw == null ? "" : raw] : (
-                value == "."
-                || (
-                  length(trimsuffix(value, ".")) <= 253
-                  && can(regex("^[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.?$", value))
-                  && !can(cidrhost("${trimsuffix(value, ".")}/32", 0))
-                )
-              )
+          for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : [
+            for idx, rec in recs : [
+              for field in [kind == "NAPTR" ? "replacement" : "target"] : [
+                for raw in [lookup(coalesce(rec.data, {}), field, ".")] : [
+                  for value in [raw == null ? "" : raw] : "records[\"${base_name}\"][\"${raw_key}\"][${idx}].data.${field}: ${jsonencode(raw)}"
+                  if !(
+                    value == "."
+                    || (
+                      length(trimsuffix(value, ".")) <= 253
+                      && can(regex("^[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.?$", value))
+                      && !can(cidrhost("${trimsuffix(value, ".")}/32", 0))
+                    )
+                  )
+                ]
+              ]
             ]
-          ]
-        ] if contains(["SRV", "HTTPS", "SVCB", "NAPTR"], element(split(".", raw_key), length(split(".", raw_key)) - 1))
+          ] if contains(["SRV", "HTTPS", "SVCB", "NAPTR"], kind)
+        ]
       ]
-    ]))
-    error_message = "SRV, HTTPS and SVCB targets and NAPTR replacements must be a DNS name (labels of letters, digits, '_' and '-' up to 63 characters, at most 253 in total, not an IP address) or \".\"."
+    ])) == 0
+    error_message = "SRV, HTTPS and SVCB targets and NAPTR replacements must be a DNS name (labels of letters, digits, '_' and '-' up to 63 characters, at most 253 in total, not an IP address) or \".\":\n${join("\n", flatten([
+      for base_name, type_map in var.records : [
+        for raw_key, recs in type_map : [
+          for kind in [element(split(".", raw_key), length(split(".", raw_key)) - 1)] : [
+            for idx, rec in recs : [
+              for field in [kind == "NAPTR" ? "replacement" : "target"] : [
+                for raw in [lookup(coalesce(rec.data, {}), field, ".")] : [
+                  for value in [raw == null ? "" : raw] : "records[\"${base_name}\"][\"${raw_key}\"][${idx}].data.${field}: ${jsonencode(raw)}"
+                  if !(
+                    value == "."
+                    || (
+                      length(trimsuffix(value, ".")) <= 253
+                      && can(regex("^[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.?$", value))
+                      && !can(cidrhost("${trimsuffix(value, ".")}/32", 0))
+                    )
+                  )
+                ]
+              ]
+            ]
+          ] if contains(["SRV", "HTTPS", "SVCB", "NAPTR"], kind)
+        ]
+      ]
+    ]))}"
   }
 }
 

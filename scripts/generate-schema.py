@@ -18,6 +18,21 @@ OUT = ROOT / "schema/records.schema.json"
 LABEL = r"[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?"
 NAME = rf"(\*|{LABEL})(\.{LABEL})*"
 
+
+def hostname(description, *special):
+    """A DNS name like the module checks it: labels, at most 253 characters without the
+    trailing dot, not an IPv4 address; special values (\"@\", \".\") are allowed as well."""
+    name = {
+        "pattern": rf"^{LABEL}(\.{LABEL})*\.?$",
+        "not": {"pattern": r"^([0-9]{1,3}\.){3}[0-9]{1,3}\.?$"},
+        "anyOf": [{"maxLength": 253}, {"maxLength": 254, "pattern": r"\.$"}],
+    }
+    return {"description": description, "type": "string", "anyOf": [{"enum": list(special)}, name] if special else [name]}
+
+
+# Data fields that hold a hostname, checked like CNAME targets; "." is the root
+DATA_HOSTNAMES = {("SRV", "target"), ("HTTPS", "target"), ("SVCB", "target"), ("NAPTR", "replacement")}
+
 # Data fields with numeric values; Terraform also accepts them as strings
 NUMERIC = {
     "priority", "weight", "port", "usage", "selector", "matching_type", "algorithm", "type",
@@ -38,14 +53,14 @@ def data_fields():
 
     def parse(marker):
         start = text.index(marker) + len(marker)
-        block = text[start:text.index("}, element(", start)]
+        block = text[start:text.index("}, kind, [])", start)]
         fields = {}
         for name, values in re.findall(r"([A-Z]+)\s*=\s*\[([^\]]*)\]", block):
             fields[name] = re.findall(r'"([a-z_0-9]+)"', values)
         return fields
 
-    allowed = parse("length(setsubtract(keys(coalesce(rec.data, {})), lookup({")
-    required = parse("&& length(setsubtract(lookup({")
+    allowed = parse("[for field in setsubtract(keys(coalesce(rec.data, {})), lookup({")
+    required = parse("[for field in setsubtract(lookup({")
     return allowed, required
 
 
@@ -97,17 +112,17 @@ def schema():
     types = {
         "A": record({**proxied, "content": {"description": "IPv4 address", "type": "string", "format": "ipv4"}}, ["content"], "A record"),
         "AAAA": record({**proxied, "content": {"description": "IPv6 address", "type": "string", "format": "ipv6"}}, ["content"], "AAAA record"),
-        "CNAME": record({**proxied, "content": {"description": "Target hostname", "type": "string"}}, ["content"], "CNAME record"),
+        "CNAME": record({**proxied, "content": hostname("Target hostname, @ for the zone apex", "@")}, ["content"], "CNAME record"),
         "ALIASES": record(
             {**proxied, "content": {"description": "Name of a CNAME pointing to this name", "type": "string", "pattern": f"^{NAME}$"}},
             ["content"], "CNAMEs pointing to this name (or to the prefixed name)",
         ),
-        "NS": record({"content": {"description": "Name server hostname", "type": "string"}}, ["content"], "NS record"),
-        "PTR": record({"content": {"description": "Hostname", "type": "string"}}, ["content"], "PTR record"),
+        "NS": record({"content": hostname("Name server hostname", "@")}, ["content"], "NS record"),
+        "PTR": record({"content": hostname("Hostname", "@")}, ["content"], "PTR record"),
         "TXT": record({"content": {"description": "Text value", "type": "string", "maxLength": 2048}}, ["content"], "TXT record"),
         "OPENPGPKEY": record({"content": {"description": "Public key", "type": "string"}}, ["content"], "OPENPGPKEY record (provider v5 only)"),
         "MX": record(
-            {"content": {"description": "Mail server hostname", "type": "string"}, "priority": {"description": "Priority, lower is preferred", "type": "integer"}},
+            {"content": hostname("Mail server hostname, . for a null MX (RFC 7505)", "@", "."), "priority": {"description": "Priority, lower is preferred", "type": "integer"}},
             ["content", "priority"], "MX record",
         ),
         "CAA": record(
@@ -127,6 +142,7 @@ def schema():
             "required": required.get(record_type, []),
             "properties": {
                 field: ENUMS.get(field) and {"enum": ENUMS[field]}
+                or ((record_type, field) in DATA_HOSTNAMES and hostname("Hostname, . for none", "."))
                 or (number_or_string() if field in NUMERIC and not (record_type == "NAPTR" and field == "flags") else {"type": "string"})
                 for field in fields
             },

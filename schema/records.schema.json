@@ -342,8 +342,30 @@
           "type": "boolean"
         },
         "content": {
-          "description": "Target hostname",
-          "type": "string"
+          "description": "Target hostname, @ for the zone apex",
+          "type": "string",
+          "anyOf": [
+            {
+              "enum": [
+                "@"
+              ]
+            },
+            {
+              "pattern": "^[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.?$",
+              "not": {
+                "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}\\.?$"
+              },
+              "anyOf": [
+                {
+                  "maxLength": 253
+                },
+                {
+                  "maxLength": 254,
+                  "pattern": "\\.$"
+                }
+              ]
+            }
+          ]
         }
       }
     },
@@ -466,7 +488,29 @@
         },
         "content": {
           "description": "Name server hostname",
-          "type": "string"
+          "type": "string",
+          "anyOf": [
+            {
+              "enum": [
+                "@"
+              ]
+            },
+            {
+              "pattern": "^[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.?$",
+              "not": {
+                "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}\\.?$"
+              },
+              "anyOf": [
+                {
+                  "maxLength": 253
+                },
+                {
+                  "maxLength": 254,
+                  "pattern": "\\.$"
+                }
+              ]
+            }
+          ]
         }
       }
     },
@@ -525,7 +569,29 @@
         },
         "content": {
           "description": "Hostname",
-          "type": "string"
+          "type": "string",
+          "anyOf": [
+            {
+              "enum": [
+                "@"
+              ]
+            },
+            {
+              "pattern": "^[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.?$",
+              "not": {
+                "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}\\.?$"
+              },
+              "anyOf": [
+                {
+                  "maxLength": 253
+                },
+                {
+                  "maxLength": 254,
+                  "pattern": "\\.$"
+                }
+              ]
+            }
+          ]
         }
       }
     },
@@ -703,8 +769,31 @@
           }
         },
         "content": {
-          "description": "Mail server hostname",
-          "type": "string"
+          "description": "Mail server hostname, . for a null MX (RFC 7505)",
+          "type": "string",
+          "anyOf": [
+            {
+              "enum": [
+                "@",
+                "."
+              ]
+            },
+            {
+              "pattern": "^[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.?$",
+              "not": {
+                "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}\\.?$"
+              },
+              "anyOf": [
+                {
+                  "maxLength": 253
+                },
+                {
+                  "maxLength": 254,
+                  "pattern": "\\.$"
+                }
+              ]
+            }
+          ]
         },
         "priority": {
           "description": "Priority, lower is preferred",
@@ -1120,7 +1209,30 @@
               ]
             },
             "target": {
-              "type": "string"
+              "description": "Hostname, . for none",
+              "type": "string",
+              "anyOf": [
+                {
+                  "enum": [
+                    "."
+                  ]
+                },
+                {
+                  "pattern": "^[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.?$",
+                  "not": {
+                    "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}\\.?$"
+                  },
+                  "anyOf": [
+                    {
+                      "maxLength": 253
+                    },
+                    {
+                      "maxLength": 254,
+                      "pattern": "\\.$"
+                    }
+                  ]
+                }
+              ]
             },
             "value": {
               "type": "string"
@@ -1358,7 +1470,30 @@
               "type": "string"
             },
             "replacement": {
-              "type": "string"
+              "description": "Hostname, . for none",
+              "type": "string",
+              "anyOf": [
+                {
+                  "enum": [
+                    "."
+                  ]
+                },
+                {
+                  "pattern": "^[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.?$",
+                  "not": {
+                    "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}\\.?$"
+                  },
+                  "anyOf": [
+                    {
+                      "maxLength": 253
+                    },
+                    {
+                      "maxLength": 254,
+                      "pattern": "\\.$"
+                    }
+                  ]
+                }
+              ]
             }
           }
         }
@@ -1536,7 +1671,30 @@
               ]
             },
             "target": {
-              "type": "string"
+              "description": "Hostname, . for none",
+              "type": "string",
+              "anyOf": [
+                {
+                  "enum": [
+                    "."
+                  ]
+                },
+                {
+                  "pattern": "^[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.?$",
+                  "not": {
+                    "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}\\.?$"
+                  },
+                  "anyOf": [
+                    {
+                      "maxLength": 253
+                    },
+                    {
+                      "maxLength": 254,
+                      "pattern": "\\.$"
+                    }
+                  ]
+                }
+              ]
             }
           }
         }
@@ -1693,7 +1851,30 @@
               ]
             },
             "target": {
-              "type": "string"
+              "description": "Hostname, . for none",
+              "type": "string",
+              "anyOf": [
+                {
+                  "enum": [
+                    "."
+                  ]
+                },
+                {
+                  "pattern": "^[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?(\\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*\\.?$",
+                  "not": {
+                    "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}\\.?$"
+                  },
+                  "anyOf": [
+                    {
+                      "maxLength": 253
+                    },
+                    {
+                      "maxLength": 254,
+                      "pattern": "\\.$"
+                    }
+                  ]
+                }
+              ]
             },
             "value": {
               "type": "string"

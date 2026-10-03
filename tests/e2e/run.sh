@@ -28,7 +28,7 @@ cleanup() {
         [ -f "${E2E_DIR}/${dir}/terraform.tfstate" ] && tf "$dir" destroy -auto-approve -no-color >/dev/null
     done
     "${E2E_DIR}/sweep.sh" "$LABEL"
-    rm -rf "${E2E_DIR}"/*/terraform.tfstate* "${E2E_DIR}"/*/tfplan
+    rm -rf "${E2E_DIR}"/*/terraform.tfstate* "${E2E_DIR}"/*/tfplan "${E2E_DIR}"/ids*
     exit "$rc"
 }
 trap cleanup EXIT
@@ -43,6 +43,19 @@ plan_summary() {
         "update=\([$rc[] | select(.change.actions == ["update"])] | length) " +
         "import=\([$rc[] | select(.change.importing)] | length) " +
         "move=\([$rc[] | select(.previous_address and .previous_address != .address)] | length)"'
+}
+
+# Prints "<record key> <Cloudflare record ID>" for the records in the state, sorted by key
+record_ids() {
+    tf "$1" show -json | jq -r '
+        [.. | objects | select(.mode? == "managed" and (.type? == "cloudflare_dns_record" or .type? == "cloudflare_record"))]
+        | map("\(.index) \(.values.id)") | sort[]'
+}
+
+# Fails unless two lists of record IDs are the same: no record was recreated
+assert_same_ids() {
+    [ -s "$2" ] || fail "$1: no records in the state"
+    diff -u "$2" "$3" >"${E2E_DIR}/ids.diff" || fail "$1: record IDs differ: $(head -40 "${E2E_DIR}/ids.diff")"
 }
 
 # Fails when the plan has any change: the provider would show a perpetual diff
@@ -70,6 +83,7 @@ summary=$(plan_summary v5 -var a_value=192.0.2.20 -var txt_value=rotation=2)
 tf v5 apply -auto-approve -no-color tfplan >/dev/null
 assert_no_changes v5 -var a_value=192.0.2.20 -var txt_value=rotation=2
 pass "value change: record without key replaced, record with key updated in place"
+record_ids v5 >"${E2E_DIR}/ids-v5.txt"
 
 # Scenario 2: the same records are adopted into an empty state. Provider v5 plans a
 # one-time update without visible changes for imported structured records (SRV, ...)
@@ -80,6 +94,9 @@ case "$summary" in
 esac
 tf import apply -auto-approve -no-color tfplan >/dev/null
 assert_no_changes import -var a_value=192.0.2.20 -var txt_value=rotation=2
+# Every record was adopted with the ID of the record created in scenario 1
+record_ids import >"${E2E_DIR}/ids-import.txt"
+assert_same_ids "import" "${E2E_DIR}/ids-v5.txt" "${E2E_DIR}/ids-import.txt"
 # The records stay managed by the state of scenario 1, which deletes them
 rm -f "${E2E_DIR}/import/terraform.tfstate"*
 pass "all ${count} records imported, no drift afterwards (${summary})"
@@ -88,6 +105,7 @@ pass "all ${count} records imported, no drift afterwards (${summary})"
 tf v4 apply -auto-approve -no-color >"${E2E_DIR}/apply.log" || fail "v4 apply: $(tail -40 "${E2E_DIR}/apply.log")"
 assert_no_changes v4
 pass "provider v4: created records without drift"
+record_ids v4 >"${E2E_DIR}/ids-v4.txt"
 cp "${E2E_DIR}/v4/terraform.tfstate" "${E2E_DIR}/v4to5/terraform.tfstate"
 rm -f "${E2E_DIR}/v4/terraform.tfstate"
 summary=$(plan_summary v4to5)
@@ -110,6 +128,9 @@ if ! tf v4to5 apply -auto-approve -no-color tfplan >"${E2E_DIR}/apply.log" 2>&1;
     echo "note: provider reported the known modified_on inconsistency after the migration"
 fi
 assert_no_changes v4to5
-pass "v4 to v5 migration without recreating records (${summary})"
+# The same records under the same keys: moved, not recreated
+record_ids v4to5 >"${E2E_DIR}/ids-v4to5.txt"
+assert_same_ids "v4 to v5 migration" "${E2E_DIR}/ids-v4.txt" "${E2E_DIR}/ids-v4to5.txt"
+pass "v4 to v5 migration without recreating records, same IDs (${summary})"
 
 echo "All end-to-end checks passed"

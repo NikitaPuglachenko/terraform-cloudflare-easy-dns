@@ -147,3 +147,122 @@ run "same_alias_name_forms" {
 
   expect_failures = [output.flat_records]
 }
+
+# A wildcard is only valid as the whole leftmost label
+
+run "wildcard_as_the_last_label" {
+  command = plan
+
+  variables {
+    records = { "foo.*" = { A = [{ content = "192.0.2.1" }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "wildcard_inside_a_label" {
+  command = plan
+
+  variables {
+    records = { "*foo" = { A = [{ content = "192.0.2.1" }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "wildcard_inside_a_word" {
+  command = plan
+
+  variables {
+    records = { "foo*bar.example.com" = { A = [{ content = "192.0.2.1" }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "wildcard_in_the_middle" {
+  command = plan
+
+  variables {
+    records = { "foo.*.app" = { A = [{ content = "192.0.2.1" }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "wildcard_forms" {
+  command = plan
+
+  variables {
+    records = {
+      "*"                 = { A = [{ content = "192.0.2.1" }] }
+      "*.app"             = { A = [{ content = "192.0.2.2" }] }
+      "*.EXAMPLE.COM"     = { TXT = [{ content = "wildcard at the apex" }] }
+      "*.App.Example.com" = { TXT = [{ content = "wildcard under app" }] }
+    }
+  }
+
+  assert {
+    condition     = sort([for k, r in output.flat_records : r.fqdn]) == tolist(["*.app.example.com", "*.app.example.com", "*.example.com", "*.example.com"])
+    error_message = "A wildcard name is qualified and lower-cased like any other name"
+  }
+}
+
+# Names are written without a trailing dot; only values (CNAME, MX, NS, PTR targets) may have one
+
+run "base_name_with_a_trailing_dot" {
+  command = plan
+
+  variables {
+    records = { "www." = { A = [{ content = "192.0.2.1" }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "zone_name_with_a_trailing_dot" {
+  command = plan
+
+  variables {
+    records = { "example.com." = { A = [{ content = "192.0.2.1" }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+# Internationalized names are given in Punycode, as the Cloudflare API expects them
+run "punycode" {
+  command = plan
+
+  variables {
+    records = {
+      "xn--mnchen-3ya" = { A = [{ content = "192.0.2.1" }], MX = [{ content = "mail.xn--mnchen-3ya.example.", priority = 10 }] }
+      "shop"           = { CNAME = [{ content = "xn--bcher-kva.example" }] }
+    }
+  }
+
+  assert {
+    condition     = output.flat_records["xn--mnchen-3ya A 192.0.2.1"].fqdn == "xn--mnchen-3ya.example.com" && output.flat_records["shop CNAME"].content == "xn--bcher-kva.example"
+    error_message = "Punycode names and targets are accepted as they are"
+  }
+}
+
+run "unicode_name" {
+  command = plan
+
+  variables {
+    records = { "münchen" = { A = [{ content = "192.0.2.1" }] } }
+  }
+
+  expect_failures = [var.records]
+}
+
+run "unicode_target" {
+  command = plan
+
+  variables {
+    records = { "shop" = { CNAME = [{ content = "bücher.example" }] } }
+  }
+
+  expect_failures = [var.records]
+}

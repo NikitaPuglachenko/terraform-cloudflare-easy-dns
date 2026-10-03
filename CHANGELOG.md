@@ -4,6 +4,19 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Changed
+
+- Validation errors of `records` list every record that fails, with its path and value: `records["app"]["CAA"][0]: tag "isue"`, `records["_sip._tcp"]["SRV"][0].data: missing field "port"`, `records["web"]["CNAME"][0]: "192.0.2.1"`; before, the message only named the rule
+- The JSON Schema checks hostnames like the module: `content` of `CNAME`, `MX`, `NS` and `PTR` records and `target`/`replacement` of `SRV`, `HTTPS`, `SVCB` and `NAPTR` records (labels, at most 253 characters, not an IP address; `@`, and `.` where the module allows it). Editors now flag such values before `plan`
+- README: when not to use the module
+
+### Internal
+
+- The core module is split into `names.tf`, `keys.tf` and `checks.tf`, with an overview in `main.tf`
+- Tests of record identity (reordering keeps keys, `key` keeps the address when the value changes, keys are case-sensitive, YAML and HCL give the same records), TTL boundaries, wildcard positions, names with a trailing dot and Punycode
+- `scripts/test-schema.py --terraform` runs the schema test documents through the module, so the schema and the validation must accept and reject the same documents; CI runs it
+- The end-to-end test checks that imported and migrated records keep their Cloudflare IDs
+
 ## [2.9.0] - 2026-10-03
 
 ### Added
