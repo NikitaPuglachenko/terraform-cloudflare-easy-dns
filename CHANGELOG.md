@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format is b
 
 ## [Unreleased]
 
+## [2.10.0] - 2026-10-03
+
 ### Changed
 
 - Validation errors of `records` list every record that fails, with its path and value: `records["app"]["CAA"][0]: tag "isue"`, `records["_sip._tcp"]["SRV"][0].data: missing field "port"`, `records["web"]["CNAME"][0]: "192.0.2.1"`; before, the message only named the rule
@@ -259,7 +261,8 @@ All notable changes to this project are documented in this file. The format is b
 - Inline aliases pointed to a relative name instead of the full hostname
 - Zone apex (`@`) handling for aliases and nested names
 
-[Unreleased]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.9.0...HEAD
+[Unreleased]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.10.0...HEAD
+[2.10.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.9.0...v2.10.0
 [2.9.0]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.8.2...v2.9.0
 [2.8.2]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.8.1...v2.8.2
 [2.8.1]: https://github.com/i386dev/terraform-cloudflare-easy-dns/compare/v2.8.0...v2.8.1
